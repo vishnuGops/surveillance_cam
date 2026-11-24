@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Surveillance Cam</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+          <div>
+            <h1 id="camera-title">Home Cam 1</h1>
+            <p class="subtitle" id="status-text" aria-live="polite">
+              Connecting to webcam...
+            </p>
+          </div>
+        </div>
+
+        <div class="controls" role="toolbar" aria-label="Stream controls">
+          <button type="button" class="btn" id="btn-pause" aria-pressed="false">
+            Pause
+          </button>
+          <button type="button" class="btn" id="btn-snapshot">
+            Snapshot
+          </button>
+          <button type="button" class="btn" id="btn-timestamp" aria-pressed="true">
+            Timestamp: On
+          </button>
+          <button type="button" class="btn" id="btn-reconnect">
+            Reconnect
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-fullscreen">
+            Fullscreen
+          </button>
+        </div>
+      </header>
+
+      <main class="viewer-panel">
+        <div class="stage" id="video-stage">
+          <img
+            id="live-stream"
+            src="/video_feed"
+            alt="Live home surveillance camera feed"
+            decoding="async"
+          />
+          <div class="stage-overlay" id="stage-overlay" hidden>
+            <p id="overlay-message">Connecting to camera...</p>
+          </div>
+        </div>
+
+        <section class="telemetry" aria-label="Camera telemetry">
+          <div class="metric">
+            <span class="metric-label">Status</span>
+            <span class="metric-value" id="metric-status">--</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Resolution</span>
+            <span class="metric-value" id="metric-resolution">--</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Frame Rate</span>
+            <span class="metric-value" id="metric-fps">--</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Viewers</span>
+            <span class="metric-value" id="metric-viewers">--</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Uptime</span>
+            <span class="metric-value" id="metric-uptime">--</span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
