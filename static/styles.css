@@ -1209,6 +1209,73 @@ body {
   font-size: 0.78rem;
 }
 
+.clip-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.42rem 0.55rem;
+  background: var(--well);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.bulk-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.bulk-bar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bulk-count {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk-count.has-selection {
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+
+.bulk-delete-btn svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+  display: block;
+}
+
+.bulk-delete-btn:not(:disabled) {
+  border-color: rgb(239 68 68 / 60%);
+  background: var(--rec-soft);
+  color: #fca5a5;
+}
+
+.clip-check {
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.clip-check:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .clip-list-header {
   display: flex;
   justify-content: space-between;
@@ -1232,7 +1299,20 @@ body {
   min-block-size: 160px;
 }
 
+.clip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.clip-row.is-checked .clip-item {
+  border-color: var(--accent-border);
+  background: rgb(255 106 0 / 8%);
+}
+
 .clip-item {
+  flex: 1 1 auto;
+  min-inline-size: 0;
   inline-size: 100%;
   appearance: none;
   border: 1px solid var(--border);
@@ -1241,8 +1321,8 @@ body {
   border-radius: var(--radius-md);
   padding: 0.42rem;
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
-  gap: 0.65rem;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 0.6rem;
   align-items: center;
   text-align: start;
   cursor: pointer;
@@ -1261,7 +1341,7 @@ body {
 
 .clip-thumb-wrap {
   position: relative;
-  inline-size: 108px;
+  inline-size: 100px;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
   overflow: clip;

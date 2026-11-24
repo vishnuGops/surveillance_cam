@@ -41,6 +41,10 @@ class LockPayload(BaseModel):
     locked: bool
 
 
+class BulkDeletePayload(BaseModel):
+    ids: list[str] = Field(default_factory=list, min_length=1, max_length=2000)
+
+
 class StorageSettingsPayload(BaseModel):
     max_storage_gb: float | None = Field(default=None, ge=0.0, le=10000.0)
     max_retention_days: int | None = Field(default=None, ge=0, le=3650)
@@ -270,6 +274,36 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
         if not deleted:
             raise HTTPException(status_code=404, detail="Recording not found")
         return {"deleted": True, "id": clip_id}
+
+    @app.post("/api/recordings/bulk-delete")
+    async def bulk_delete_recordings(payload: BulkDeletePayload) -> dict:
+        def _do_bulk_delete() -> dict:
+            deleted_ids: list[str] = []
+            skipped_locked: list[str] = []
+            failed_ids: list[str] = []
+            for clip_id in payload.ids:
+                try:
+                    if storage.delete_clip(clip_id, force=False):
+                        deleted_ids.append(clip_id)
+                    else:
+                        failed_ids.append(clip_id)
+                except PermissionError:
+                    skipped_locked.append(clip_id)
+                except ValueError:
+                    failed_ids.append(clip_id)
+            stats = storage.get_storage_stats(
+                max_storage_gb=cfg.max_storage_gb,
+                max_retention_days=cfg.max_retention_days,
+            )
+            return {
+                "deleted": deleted_ids,
+                "deleted_count": len(deleted_ids),
+                "skipped_locked": skipped_locked,
+                "failed": failed_ids,
+                "storage": stats,
+            }
+
+        return await asyncio.to_thread(_do_bulk_delete)
 
     # ------------------------------------------------------------------
     # Storage & retention endpoints

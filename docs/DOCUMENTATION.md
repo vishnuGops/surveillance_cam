@@ -166,6 +166,7 @@ C:\SurveillanceData\
 | `GET` | `/api/recordings/thumb/{clip_id}` | Serves the clip's JPEG preview thumbnail (`Cache-Control: max-age=3600`). |
 | `PATCH` | `/api/recordings/lock/{clip_id}` | Sets `{"locked": true | false}` to star/protect or unprotect a clip. |
 | `DELETE` | `/api/recordings/item/{clip_id}` | Deletes an unlocked clip + thumbnail + metadata. Returns `409 Conflict` if starred/locked. |
+| `POST` | `/api/recordings/bulk-delete` | Deletes multiple unlocked clips (`{"ids": [...]}`), skipping any starred/locked clips safely and returning deleted/skipped counts + updated storage stats. |
 
 ### Storage & Retention Endpoints
 
@@ -225,7 +226,8 @@ C:\SurveillanceData\
    - Card controls (**● REC / REC OFF**, **NV:AUTO/ON/OFF**, **SNAP**, **RENAME**, **FULL**) remain visible in both Grid and Focus views; timestamps are always burned into the bottom-left of every feed and recording. Toggling recording off immediately archives the current loop into **Recordings**.
 3. **Recordings Tab:**
    - Filter clips by **Camera**, **Date**, or **★ LOCKED ONLY**.
-   - Play directly in the reticle-framed theater with native timeline scrubbing, `0.5× / 1× / 2× / 4×` speed pills, **PREV / NEXT** loop navigation, **STAR / LOCK** protection, **DOWNLOAD**, and **DELETE**.
+   - Use per-clip checkboxes (with **Shift+Click** range selection), **SELECT ALL**, and the trash **Delete** icon to purge multiple unlocked recordings at once (starred/locked clips remain protected).
+   - Select any clip to load it paused, then click the centered tactical Play/Pause overlay to watch with native timeline scrubbing, `0.5× / 1× / 2× / 4×` speed pills, **PREV / NEXT** loop navigation, **STAR / LOCK** protection, **DOWNLOAD**, and **DELETE**.
 
 ---
 
@@ -244,6 +246,10 @@ C:\SurveillanceData\
 ---
 
 ## 9. Changelog
+
+### `v0.5.0` — 2026-11-24
+- Added multi-selection checkboxes (including **Shift+Click** range selection), **SELECT ALL** (with indeterminate state), selected count indicator, and a bulk **Delete** trash-icon button to the **Recordings** archive sidebar.
+- Added `POST /api/recordings/bulk-delete` in `app.py` to delete selected unlocked clips in one batch while safely skipping starred/locked clips.
 
 ### `v0.4.1` — 2026-11-24
 - Fixed **Focus** mode viewport sizing in `static/styles.css` (`block-size: clamp(300px, calc(100dvb - 19.5rem), 760px)` + `overflow: clip` + `min-block-size: 0` on `<img>`) so the entire 16:9 video frame (including the bottom-left timestamp) and all card action buttons (`REC`, `NV`, `SNAP`, `RENAME`, `FULL`) fit cleanly on screen with zero clipping.

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="doc-source-sha256" content="9860ac21e6f3b51ea48fe57f7cbf263b105dbff3ff33559d21bf090db4eef1bb" />
+    <meta name="doc-source-sha256" content="2f3baad8f9d2d9b0c59e1f63d584b1e0c09c353db82e07a7399ab5f18112d49f" />
     <title>EYEz — Project &amp; Architecture Documentation</title>
     <style>
       :root {
@@ -365,6 +365,7 @@
 <li><a href="#7-web-dashboard-guide">7. Web Dashboard Guide</a></li>
 <li><a href="#8-keeping-docs-in-sync">8. Keeping Docs in Sync</a></li>
 <li><a href="#9-changelog">9. Changelog</a><ul>
+<li><a href="#v050-2026-11-24">v0.5.0 — 2026-11-24</a></li>
 <li><a href="#v041-2026-11-24">v0.4.1 — 2026-11-24</a></li>
 <li><a href="#v040-2026-11-24">v0.4.0 — 2026-11-24</a></li>
 <li><a href="#v032-2026-11-24">v0.3.2 — 2026-11-24</a></li>
@@ -381,7 +382,7 @@
 </nav>
         <div class="sync-meta">
           Synced from DOCUMENTATION.md<br />
-          SHA-256: 9860ac21e6f3
+          SHA-256: 2f3baad8f9d2
         </div>
       </aside>
 
@@ -679,6 +680,11 @@
 <td><code>/api/recordings/item/{clip_id}</code></td>
 <td>Deletes an unlocked clip + thumbnail + metadata. Returns <code>409 Conflict</code> if starred/locked.</td>
 </tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/recordings/bulk-delete</code></td>
+<td>Deletes multiple unlocked clips (<code>{"ids": [...]}</code>), skipping any starred/locked clips safely and returning deleted/skipped counts + updated storage stats.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="storage-retention-endpoints">Storage &amp; Retention Endpoints</h3>
@@ -826,7 +832,8 @@
    - Card controls (<strong>● REC / REC OFF</strong>, <strong>NV:AUTO/ON/OFF</strong>, <strong>SNAP</strong>, <strong>RENAME</strong>, <strong>FULL</strong>) remain visible in both Grid and Focus views; timestamps are always burned into the bottom-left of every feed and recording. Toggling recording off immediately archives the current loop into <strong>Recordings</strong>.</li>
 <li><strong>Recordings Tab:</strong>
    - Filter clips by <strong>Camera</strong>, <strong>Date</strong>, or <strong>★ LOCKED ONLY</strong>.
-   - Play directly in the reticle-framed theater with native timeline scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed pills, <strong>PREV / NEXT</strong> loop navigation, <strong>STAR / LOCK</strong> protection, <strong>DOWNLOAD</strong>, and <strong>DELETE</strong>.</li>
+   - Use per-clip checkboxes (with <strong>Shift+Click</strong> range selection), <strong>SELECT ALL</strong>, and the trash <strong>Delete</strong> icon to purge multiple unlocked recordings at once (starred/locked clips remain protected).
+   - Select any clip to load it paused, then click the centered tactical Play/Pause overlay to watch with native timeline scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed pills, <strong>PREV / NEXT</strong> loop navigation, <strong>STAR / LOCK</strong> protection, <strong>DOWNLOAD</strong>, and <strong>DELETE</strong>.</li>
 </ol>
 <hr />
 <h2 id="8-keeping-docs-in-sync">8. Keeping Docs in Sync</h2>
@@ -839,6 +846,11 @@
 </code></pre>
 <hr />
 <h2 id="9-changelog">9. Changelog</h2>
+<h3 id="v050-2026-11-24"><code>v0.5.0</code> — 2026-11-24</h3>
+<ul>
+<li>Added multi-selection checkboxes (including <strong>Shift+Click</strong> range selection), <strong>SELECT ALL</strong> (with indeterminate state), selected count indicator, and a bulk <strong>Delete</strong> trash-icon button to the <strong>Recordings</strong> archive sidebar.</li>
+<li>Added <code>POST /api/recordings/bulk-delete</code> in <code>app.py</code> to delete selected unlocked clips in one batch while safely skipping starred/locked clips.</li>
+</ul>
 <h3 id="v041-2026-11-24"><code>v0.4.1</code> — 2026-11-24</h3>
 <ul>
 <li>Fixed <strong>Focus</strong> mode viewport sizing in <code>static/styles.css</code> (<code>block-size: clamp(300px, calc(100dvb - 19.5rem), 760px)</code> + <code>overflow: clip</code> + <code>min-block-size: 0</code> on <code>&lt;img&gt;</code>) so the entire 16:9 video frame (including the bottom-left timestamp) and all card action buttons (<code>REC</code>, <code>NV</code>, <code>SNAP</code>, <code>RENAME</code>, <code>FULL</code>) fit cleanly on screen with zero clipping.</li>

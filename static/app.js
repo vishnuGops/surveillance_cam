@@ -10,6 +10,8 @@
     recordings: [],
     dates: [],
     selectedClipId: null,
+    checkedClipIds: new Set(),
+    lastCheckedIndex: null,
     filters: {
       cameraId: "",
       date: "",
@@ -64,6 +66,9 @@
   const filterDate = document.getElementById("filter-date");
   const btnFilterStarred = document.getElementById("btn-filter-starred");
   const btnRefreshRecordings = document.getElementById("btn-refresh-recordings");
+  const checkboxSelectAll = document.getElementById("checkbox-select-all");
+  const clipSelectedLabel = document.getElementById("clip-selected-label");
+  const btnDeleteSelected = document.getElementById("btn-delete-selected");
   const clipCountLabel = document.getElementById("clip-count-label");
   const clipStorageLabel = document.getElementById("clip-storage-label");
   const clipList = document.getElementById("clip-list");
@@ -847,6 +852,47 @@
     btnNextClip.disabled = idx < 0 || idx >= state.recordings.length - 1;
   }
 
+  function getDeletableClips() {
+    return state.recordings.filter((r) => !r.locked);
+  }
+
+  function syncBulkSelectionUi() {
+    const deletable = getDeletableClips();
+    const deletableIds = new Set(deletable.map((r) => r.id));
+
+    // Prune any checked IDs that are no longer visible or became locked
+    for (const id of Array.from(state.checkedClipIds)) {
+      if (!deletableIds.has(id)) {
+        state.checkedClipIds.delete(id);
+      }
+    }
+
+    const checkedCount = state.checkedClipIds.size;
+    const totalDeletable = deletable.length;
+
+    clipSelectedLabel.textContent = `${checkedCount} SELECTED`;
+    clipSelectedLabel.classList.toggle("has-selection", checkedCount > 0);
+    btnDeleteSelected.disabled = checkedCount === 0;
+    btnDeleteSelected.title =
+      checkedCount > 0
+        ? `Delete ${checkedCount} selected recording(s)`
+        : "Select unlocked recordings to delete";
+
+    checkboxSelectAll.disabled = totalDeletable === 0;
+    checkboxSelectAll.checked =
+      totalDeletable > 0 && checkedCount === totalDeletable;
+    checkboxSelectAll.indeterminate =
+      checkedCount > 0 && checkedCount < totalDeletable;
+
+    clipList.querySelectorAll(".clip-row").forEach((row) => {
+      const id = row.dataset.clipId;
+      const isChecked = state.checkedClipIds.has(id);
+      row.classList.toggle("is-checked", isChecked);
+      const cb = row.querySelector("input.clip-check");
+      if (cb) cb.checked = isChecked;
+    });
+  }
+
   function renderRecordingsList() {
     const recs = state.recordings;
     const totalBytes = recs.reduce((acc, r) => acc + (r.size_bytes || 0), 0);
@@ -870,8 +916,55 @@
     populateCameraFilterOptions();
 
     clipList.innerHTML = "";
-    recs.forEach((clip) => {
+    recs.forEach((clip, index) => {
       const li = document.createElement("li");
+      li.className = "clip-row";
+      li.dataset.clipId = clip.id;
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "clip-check";
+      cb.disabled = Boolean(clip.locked);
+      cb.checked = !clip.locked && state.checkedClipIds.has(clip.id);
+      cb.setAttribute(
+        "aria-label",
+        clip.locked
+          ? `${clip.camera_name} ${clip.filename} (locked)`
+          : `Select ${clip.camera_name} ${clip.filename}`
+      );
+      if (clip.locked) {
+        cb.title = "Locked clip — unstar to select for deletion";
+      }
+
+      cb.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (clip.locked) return;
+        const targetChecked = cb.checked;
+
+        // Shift+Click range selection across visible unlocked clips
+        if (e.shiftKey && state.lastCheckedIndex !== null) {
+          const start = Math.min(state.lastCheckedIndex, index);
+          const end = Math.max(state.lastCheckedIndex, index);
+          for (let i = start; i <= end; i += 1) {
+            const item = state.recordings[i];
+            if (item && !item.locked) {
+              if (targetChecked) {
+                state.checkedClipIds.add(item.id);
+              } else {
+                state.checkedClipIds.delete(item.id);
+              }
+            }
+          }
+        } else if (targetChecked) {
+          state.checkedClipIds.add(clip.id);
+        } else {
+          state.checkedClipIds.delete(clip.id);
+        }
+
+        state.lastCheckedIndex = index;
+        syncBulkSelectionUi();
+      });
+
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "clip-item";
@@ -881,7 +974,7 @@
       }
 
       const thumbMarkup = clip.thumbnail_url
-        ? `<img src="${clip.thumbnail_url}" alt="" width="108" height="61" loading="lazy" />`
+        ? `<img src="${clip.thumbnail_url}" alt="" width="100" height="56" loading="lazy" />`
         : "";
       const starTag = clip.locked
         ? `<span class="clip-star-tag" aria-label="Locked">★</span>`
@@ -901,9 +994,13 @@
       `;
       btn.querySelector(".clip-item-cam").textContent = clip.camera_name;
       btn.addEventListener("click", () => selectClip(clip.id));
+
+      li.appendChild(cb);
       li.appendChild(btn);
       clipList.appendChild(li);
     });
+
+    syncBulkSelectionUi();
 
     if (recs.length === 0) {
       selectClip(null);
@@ -1005,6 +1102,55 @@
   btnRefreshRecordings.addEventListener("click", () => {
     fetchRecordings();
     showToast("Archive refreshed");
+  });
+
+  checkboxSelectAll.addEventListener("change", () => {
+    const deletable = getDeletableClips();
+    if (checkboxSelectAll.checked) {
+      deletable.forEach((c) => state.checkedClipIds.add(c.id));
+    } else {
+      state.checkedClipIds.clear();
+    }
+    state.lastCheckedIndex = null;
+    syncBulkSelectionUi();
+  });
+
+  btnDeleteSelected.addEventListener("click", async () => {
+    const ids = Array.from(state.checkedClipIds);
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected recording${ids.length === 1 ? "" : "s"}?`
+      )
+    ) {
+      return;
+    }
+
+    btnDeleteSelected.disabled = true;
+    try {
+      const data = await apiJson("/api/recordings/bulk-delete", {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      const deletedSet = new Set(data.deleted || []);
+      if (state.selectedClipId && deletedSet.has(state.selectedClipId)) {
+        selectClip(null);
+      }
+      state.checkedClipIds.clear();
+      state.lastCheckedIndex = null;
+      const count = data.deleted_count || 0;
+      const skipped = (data.skipped_locked || []).length;
+      showToast(
+        skipped > 0
+          ? `Purged ${count} clip(s) // ${skipped} locked skipped`
+          : `Purged ${count} recording${count === 1 ? "" : "s"}`
+      );
+      await fetchRecordings();
+      await fetchCameras();
+    } catch (err) {
+      showToast(err.message || "Bulk delete failed");
+      syncBulkSelectionUi();
+    }
   });
 
   // ---------------- DIALOGS ----------------
