@@ -3,79 +3,332 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Home Surveillance Cam</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <title>HomeWatch NVR — Multi-Camera Surveillance</title>
+    <link rel="stylesheet" href="/static/styles.css?v=0.2.2" />
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <span class="status-dot" id="status-dot" aria-hidden="true"></span>
-          <div>
-            <h1 id="camera-title">Home Cam 1</h1>
-            <p class="subtitle" id="status-text" aria-live="polite">
-              Connecting to webcam...
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="8.5" />
+              <circle cx="12" cy="12" r="3.5" />
+              <circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <h1>HomeWatch NVR</h1>
+            <p class="system-summary" id="system-summary" aria-live="polite">
+              Initializing cameras...
             </p>
           </div>
         </div>
 
-        <div class="controls" role="toolbar" aria-label="Stream controls">
-          <button type="button" class="btn" id="btn-pause" aria-pressed="false">
-            Pause
+        <nav class="tab-switcher" role="tablist" aria-label="Primary views">
+          <button
+            type="button"
+            class="tab-btn is-active"
+            id="tab-cameras"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-cameras"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="2.5" y="5.5" width="14" height="13" rx="2.5" />
+              <path d="M16.5 10l5-3v10l-5-3" />
+            </svg>
+            <span>Cameras</span>
+            <span class="tab-badge" id="badge-cameras">0</span>
           </button>
-          <button type="button" class="btn" id="btn-snapshot">
-            Snapshot
+
+          <button
+            type="button"
+            class="tab-btn"
+            id="tab-recordings"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-recordings"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2.5" />
+              <path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none" />
+            </svg>
+            <span>Recordings</span>
+            <span class="tab-badge" id="badge-recordings">0</span>
           </button>
-          <button type="button" class="btn" id="btn-timestamp" aria-pressed="true">
-            Timestamp: On
+        </nav>
+
+        <div class="topbar-actions">
+          <button
+            type="button"
+            class="storage-pill"
+            id="btn-storage-settings"
+            aria-label="Open storage and retention settings"
+          >
+            <span class="storage-pill-top">
+              <span class="storage-label" id="storage-pill-label">Storage</span>
+              <span class="storage-meta" id="storage-pill-meta">-- / 50 GB</span>
+            </span>
+            <span class="storage-bar-track" aria-hidden="true">
+              <span class="storage-bar-fill" id="storage-bar-fill"></span>
+            </span>
           </button>
-          <button type="button" class="btn" id="btn-reconnect">
-            Reconnect
-          </button>
-          <button type="button" class="btn btn-primary" id="btn-fullscreen">
-            Fullscreen
+
+          <button type="button" class="btn btn-accent" id="btn-scan-cameras">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <path d="M21 4v5h-5" />
+            </svg>
+            <span>Scan USB</span>
           </button>
         </div>
       </header>
 
-      <main class="viewer-panel">
-        <div class="stage" id="video-stage">
-          <img
-            id="live-stream"
-            src="/video_feed"
-            alt="Live home surveillance camera feed"
-            decoding="async"
-          />
-          <div class="stage-overlay" id="stage-overlay" hidden>
-            <p id="overlay-message">Connecting to camera...</p>
-          </div>
-        </div>
+      <main class="workspace">
+        <!-- TAB 1: CAMERAS -->
+        <section
+          class="tab-panel"
+          id="panel-cameras"
+          role="tabpanel"
+          aria-labelledby="tab-cameras"
+        >
+          <div class="panel-toolbar">
+            <div class="toolbar-group">
+              <span class="toolbar-title">Live Feeds</span>
+              <span class="toolbar-hint" id="camera-toolbar-hint">
+                Continuous 5-min H.264 loops saved to C:\SurveillanceData
+              </span>
+            </div>
 
-        <section class="telemetry" aria-label="Camera telemetry">
-          <div class="metric">
-            <span class="metric-label">Status</span>
-            <span class="metric-value" id="metric-status">--</span>
+            <div class="toolbar-group">
+              <div class="segmented" role="group" aria-label="Camera wall layout">
+                <button type="button" class="seg-btn is-active" id="btn-layout-grid" aria-pressed="true">
+                  Grid
+                </button>
+                <button type="button" class="seg-btn" id="btn-layout-focus" aria-pressed="false">
+                  Focus
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="metric">
-            <span class="metric-label">Resolution</span>
-            <span class="metric-value" id="metric-resolution">--</span>
+
+          <div class="focus-strip" id="focus-strip" hidden role="group" aria-label="Select focused camera"></div>
+
+          <div class="camera-wall" id="camera-wall" data-layout="grid"></div>
+
+          <div class="empty-state" id="cameras-empty" hidden>
+            <h2>No USB cameras detected</h2>
+            <p>
+              Connect one or more USB webcams to this PC and click
+              <strong>Scan USB</strong> to add them automatically.
+            </p>
           </div>
-          <div class="metric">
-            <span class="metric-label">Frame Rate</span>
-            <span class="metric-value" id="metric-fps">--</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Viewers</span>
-            <span class="metric-value" id="metric-viewers">--</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Uptime</span>
-            <span class="metric-value" id="metric-uptime">--</span>
+        </section>
+
+        <!-- TAB 2: RECORDINGS -->
+        <section
+          class="tab-panel"
+          id="panel-recordings"
+          role="tabpanel"
+          aria-labelledby="tab-recordings"
+          hidden
+        >
+          <div class="recordings-layout">
+            <div class="theater-card">
+              <div class="theater-stage" id="theater-stage">
+                <video
+                  id="recording-player"
+                  controls
+                  playsinline
+                  preload="metadata"
+                  width="1280"
+                  height="720"
+                ></video>
+                <div class="theater-placeholder" id="theater-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                    <path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none" />
+                  </svg>
+                  <h2>Select a recorded loop</h2>
+                  <p>
+                    5-minute H.264 recordings appear automatically once each loop finishes (or when you stop recording on a camera).
+                  </p>
+                </div>
+              </div>
+
+              <div class="theater-bar" id="theater-bar" hidden>
+                <div class="clip-headline">
+                  <div class="clip-title-row">
+                    <h2 id="player-clip-title">--</h2>
+                    <span class="pill pill-star" id="player-locked-badge" hidden>Protected</span>
+                  </div>
+                  <p class="clip-submeta" id="player-clip-meta">--</p>
+                </div>
+
+                <div class="theater-controls">
+                  <div class="speed-group" role="group" aria-label="Playback speed">
+                    <button type="button" class="chip-btn" data-speed="0.5">0.5×</button>
+                    <button type="button" class="chip-btn is-active" data-speed="1">1×</button>
+                    <button type="button" class="chip-btn" data-speed="2">2×</button>
+                    <button type="button" class="chip-btn" data-speed="4">4×</button>
+                  </div>
+
+                  <div class="clip-actions">
+                    <button type="button" class="btn btn-sm" id="btn-prev-clip">Prev</button>
+                    <button type="button" class="btn btn-sm" id="btn-next-clip">Next</button>
+                    <button type="button" class="btn btn-sm" id="btn-toggle-star" aria-pressed="false">
+                      Star
+                    </button>
+                    <a class="btn btn-sm" id="btn-download-clip" href="#" download>
+                      Download
+                    </a>
+                    <button type="button" class="btn btn-sm btn-danger" id="btn-delete-clip">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="clip-library" aria-label="Recorded clips">
+              <search class="library-filters">
+                <div class="filter-row">
+                  <label class="sr-only" for="filter-camera">Filter by camera</label>
+                  <select id="filter-camera" class="select-input">
+                    <option value="">All Cameras</option>
+                  </select>
+
+                  <label class="sr-only" for="filter-date">Filter by date</label>
+                  <select id="filter-date" class="select-input">
+                    <option value="">All Dates</option>
+                  </select>
+                </div>
+
+                <div class="filter-row filter-row-actions">
+                  <button
+                    type="button"
+                    class="chip-btn"
+                    id="btn-filter-starred"
+                    aria-pressed="false"
+                  >
+                    ★ Starred Only
+                  </button>
+                  <button type="button" class="btn btn-sm" id="btn-refresh-recordings">
+                    Refresh
+                  </button>
+                </div>
+              </search>
+
+              <div class="clip-list-header">
+                <span id="clip-count-label">0 clips</span>
+                <span id="clip-storage-label">0 MB</span>
+              </div>
+
+              <ul class="clip-list" id="clip-list"></ul>
+
+              <div class="empty-state compact" id="recordings-empty" hidden>
+                <p>No recorded loops match your filters yet.</p>
+              </div>
+            </aside>
           </div>
         </section>
       </main>
     </div>
 
-    <script src="/static/app.js" defer></script>
+    <!-- STORAGE & RETENTION SETTINGS DIALOG -->
+    <dialog class="modal" id="dialog-storage" closedby="any" aria-labelledby="dialog-storage-title">
+      <div class="modal-header">
+        <div>
+          <h2 id="dialog-storage-title">Storage &amp; Loop Recording</h2>
+          <p class="modal-subtitle" id="modal-storage-path">C:\SurveillanceData</p>
+        </div>
+        <button type="button" class="icon-btn" id="btn-close-storage" aria-label="Close settings">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-stats">
+        <div class="stat-box">
+          <span class="stat-label">Recordings Used</span>
+          <strong class="stat-val" id="modal-rec-used">--</strong>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Saved Loops</span>
+          <strong class="stat-val" id="modal-rec-count">--</strong>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">C: Free Space</span>
+          <strong class="stat-val" id="modal-disk-free">--</strong>
+        </div>
+      </div>
+
+      <form class="modal-form" id="form-storage-settings">
+        <div class="field-grid">
+          <label class="field">
+            <span>Max Storage Cap (GB)</span>
+            <input type="number" id="input-max-gb" min="0" max="10000" step="1" required />
+            <small>0 disables size cap. Starred clips are never auto-deleted.</small>
+          </label>
+
+          <label class="field">
+            <span>Keep Recordings (Days)</span>
+            <input type="number" id="input-max-days" min="0" max="3650" step="1" required />
+            <small>0 keeps clips indefinitely until storage cap is reached.</small>
+          </label>
+
+          <label class="field">
+            <span>Loop Segment Length (Minutes)</span>
+            <input type="number" id="input-seg-minutes" min="1" max="60" step="1" required />
+            <small>Default is 5-minute continuous H.264 loops.</small>
+          </label>
+
+          <label class="field checkbox-field">
+            <input type="checkbox" id="input-auto-record" />
+            <span>Auto-record newly discovered USB cameras</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn" id="btn-run-cleanup">Run Cleanup Now</button>
+          <div class="modal-footer-right">
+            <button type="button" class="btn" id="btn-cancel-storage">Cancel</button>
+            <button type="submit" class="btn btn-accent">Save Settings</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- RENAME CAMERA DIALOG -->
+    <dialog class="modal modal-sm" id="dialog-rename" closedby="any" aria-labelledby="dialog-rename-title">
+      <div class="modal-header">
+        <h2 id="dialog-rename-title">Rename Camera</h2>
+        <button type="button" class="icon-btn" id="btn-close-rename" aria-label="Close rename dialog">
+          ✕
+        </button>
+      </div>
+      <form class="modal-form" id="form-rename">
+        <label class="field">
+          <span>Camera Display Name</span>
+          <input
+            type="text"
+            id="input-camera-name"
+            maxlength="60"
+            required
+            placeholder="e.g. Front Door, Living Room, Garage"
+          />
+        </label>
+        <div class="modal-footer">
+          <div class="modal-footer-right">
+            <button type="button" class="btn" id="btn-cancel-rename">Cancel</button>
+            <button type="submit" class="btn btn-accent">Save Name</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="/static/app.js?v=0.2.2" defer></script>
   </body>
 </html>

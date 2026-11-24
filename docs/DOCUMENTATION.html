@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="doc-source-sha256" content="d4bcb92a90580f0ba61ff29ff7cb1c3d68ad5c65d05881fdb92a3c688afb0104" />
+    <title>HomeWatch NVR — Project &amp; Architecture Documentation</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080c14;
+        --surface: #101724;
+        --surface-2: #172033;
+        --border: rgb(148 163 184 / 16%);
+        --border-strong: rgb(148 163 184 / 30%);
+        --text: #edf2f7;
+        --muted: #94a3b8;
+        --accent: #60a5fa;
+        --accent-soft: rgb(59 130 246 / 14%);
+        --code-bg: #0b111d;
+        --radius: 12px;
+      }
+
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-2: #f1f5f9;
+        --border: rgb(15 23 42 / 12%);
+        --border-strong: rgb(15 23 42 / 24%);
+        --text: #0f172a;
+        --muted: #475569;
+        --accent: #2563eb;
+        --accent-soft: rgb(37 99 235 / 10%);
+        --code-bg: #0f172a;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-block-size: 100dvb;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        line-height: 1.65;
+      }
+
+      .doc-shell {
+        inline-size: min(1320px, 100%);
+        margin-inline: auto;
+        padding: clamp(1rem, 2vw, 2rem);
+        display: grid;
+        grid-template-columns: 270px minmax(0, 1fr);
+        gap: 2rem;
+        align-items: start;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        position: sticky;
+        inset-block-start: 1.25rem;
+        max-block-size: calc(100dvb - 2.5rem);
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1.05rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding-block-end: 0.7rem;
+        border-block-end: 1px solid var(--border);
+      }
+
+      .sidebar-brand {
+        font-weight: 700;
+        font-size: 0.92rem;
+        letter-spacing: -0.01em;
+      }
+
+      .theme-btn {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.76rem;
+        font-weight: 500;
+        padding: 0.3rem 0.6rem;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .theme-btn:hover {
+        border-color: var(--border-strong);
+      }
+
+      .toc-title {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .toc ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+
+      .toc ul ul {
+        padding-inline-start: 0.85rem;
+        margin-block-start: 0.15rem;
+      }
+
+      .toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.83rem;
+        padding: 0.24rem 0.48rem;
+        border-radius: 6px;
+        transition: background-color 120ms ease, color 120ms ease;
+      }
+
+      .toc a:hover {
+        color: var(--text);
+        background: var(--accent-soft);
+      }
+
+      .sync-meta {
+        margin-block-start: auto;
+        padding-block-start: 0.75rem;
+        border-block-start: 1px solid var(--border);
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        word-break: break-all;
+      }
+
+      /* Main Content */
+      .content {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: clamp(1.35rem, 3vw, 2.5rem);
+        min-inline-size: 0;
+      }
+
+      .content h1 {
+        margin-block: 0 1rem;
+        font-size: clamp(1.55rem, 1.3rem + 1vw, 2.1rem);
+        letter-spacing: -0.025em;
+        line-height: 1.25;
+      }
+
+      .content h2 {
+        margin-block: 2.2rem 0.85rem;
+        padding-block-end: 0.45rem;
+        border-block-end: 1px solid var(--border);
+        font-size: clamp(1.2rem, 1.05rem + 0.5vw, 1.45rem);
+        letter-spacing: -0.015em;
+      }
+
+      .content h3 {
+        margin-block: 1.5rem 0.55rem;
+        font-size: 1.05rem;
+      }
+
+      .content p {
+        margin-block: 0.75rem;
+      }
+
+      .content a {
+        color: var(--accent);
+      }
+
+      .content blockquote {
+        margin: 1rem 0;
+        padding: 0.8rem 1rem;
+        border-inline-start: 3px solid var(--accent);
+        background: var(--accent-soft);
+        border-radius: 0 8px 8px 0;
+      }
+
+      .content blockquote p {
+        margin: 0;
+      }
+
+      .content hr {
+        border: 0;
+        border-block-start: 1px solid var(--border);
+        margin-block: 1.75rem;
+      }
+
+      .content ul,
+      .content ol {
+        padding-inline-start: 1.4rem;
+      }
+
+      .content li {
+        margin-block: 0.32rem;
+      }
+
+      .content code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.86em;
+        padding: 0.14rem 0.38rem;
+        border-radius: 6px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+      }
+
+      .code-wrap {
+        position: relative;
+        margin-block: 1rem;
+      }
+
+      .content pre {
+        margin: 0;
+        padding: 1rem 1.1rem;
+        border-radius: 10px;
+        background: var(--code-bg);
+        color: #e2e8f0;
+        border: 1px solid var(--border);
+        overflow-x: auto;
+        line-height: 1.5;
+        font-size: 0.84rem;
+      }
+
+      .content pre code {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: inherit;
+        font-size: inherit;
+      }
+
+      .copy-btn {
+        position: absolute;
+        inset-block-start: 0.55rem;
+        inset-inline-end: 0.55rem;
+        appearance: none;
+        border: 1px solid rgb(255 255 255 / 16%);
+        background: rgb(15 23 42 / 85%);
+        color: #e2e8f0;
+        font: inherit;
+        font-size: 0.72rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .copy-btn:hover {
+        background: rgb(30 41 59 / 95%);
+      }
+
+      /* Responsive Tables */
+      .table-wrap {
+        overflow-x: auto;
+        margin-block: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+
+      .content table {
+        inline-size: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+
+      .content th,
+      .content td {
+        text-align: start;
+        padding: 0.65rem 0.85rem;
+        border-block-end: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      .content th {
+        background: var(--surface-2);
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+
+      .content tr:last-child td {
+        border-block-end: 0;
+      }
+
+      @media (max-width: 960px) {
+        .doc-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          max-block-size: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc-shell">
+      <aside class="sidebar" aria-label="Document navigation">
+        <div class="sidebar-header">
+          <span class="sidebar-brand">HomeWatch NVR Docs</span>
+          <button type="button" class="theme-btn" id="btn-theme">Light</button>
+        </div>
+        <p class="toc-title">On This Page</p>
+        <nav class="toc"><div class="toc">
+<ul>
+<li><a href="#1-overview">1. Overview</a><ul>
+<li><a href="#current-feature-set-v020">Current Feature Set (v0.2.0)</a></li>
+</ul>
+</li>
+<li><a href="#2-system-architecture">2. System Architecture</a><ul>
+<li><a href="#module-map">Module Map</a></li>
+<li><a href="#data-threading-flow">Data &amp; Threading Flow</a></li>
+</ul>
+</li>
+<li><a href="#3-design-choices-architectural-decisions-adrs">3. Design Choices &amp; Architectural Decisions (ADRs)</a></li>
+<li><a href="#4-storage-layout-data-schema">4. Storage Layout &amp; Data Schema</a><ul>
+<li><a href="#recording-metadata-sidecar-metajson">Recording Metadata Sidecar (*.meta.json)</a></li>
+<li><a href="#persistent-configuration-csurveillancedataconfigjson">Persistent Configuration (C:\SurveillanceData\config.json)</a></li>
+</ul>
+</li>
+<li><a href="#5-api-reference">5. API Reference</a><ul>
+<li><a href="#multi-camera-endpoints">Multi-Camera Endpoints</a></li>
+<li><a href="#recordings-playback-endpoints">Recordings &amp; Playback Endpoints</a></li>
+<li><a href="#storage-retention-endpoints">Storage &amp; Retention Endpoints</a></li>
+<li><a href="#legacy-convenience-aliases-first-camera">Legacy Convenience Aliases (First Camera)</a></li>
+</ul>
+</li>
+<li><a href="#6-configuration-environment-variables-cli">6. Configuration, Environment Variables &amp; CLI</a><ul>
+<li><a href="#running-the-server">Running the Server</a></li>
+<li><a href="#environment-variables">Environment Variables</a></li>
+</ul>
+</li>
+<li><a href="#7-web-dashboard-guide">7. Web Dashboard Guide</a></li>
+<li><a href="#8-keeping-docs-in-sync">8. Keeping Docs in Sync</a></li>
+<li><a href="#9-changelog">9. Changelog</a><ul>
+<li><a href="#v022-2026-11-24">v0.2.2 — 2026-11-24</a></li>
+<li><a href="#v021-2026-11-24">v0.2.1 — 2026-11-24</a></li>
+<li><a href="#v020-2026-11-24">v0.2.0 — 2026-11-24</a></li>
+<li><a href="#v010-2026-11-23">v0.1.0 — 2026-11-23</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+        <div class="sync-meta">
+          Synced from DOCUMENTATION.md<br />
+          SHA-256: d4bcb92a9058
+        </div>
+      </aside>
+
+      <main class="content">
+        <h1 id="homewatch-nvr-project-architecture-documentation">HomeWatch NVR — Project &amp; Architecture Documentation</h1>
+<blockquote>
+<p><strong>Single Source of Truth:</strong> This document (<code>docs/DOCUMENTATION.md</code>) is synchronized with <code>docs/DOCUMENTATION.html</code> via <code>python scripts/sync_docs.py</code>. Every feature change, API addition, or architectural decision must be recorded here and synced.</p>
+</blockquote>
+<hr />
+<h2 id="1-overview">1. Overview</h2>
+<p><strong>HomeWatch NVR (<code>surveillance_cam</code>)</strong> is a lightweight, local-first multi-camera home surveillance application built with Python, FastAPI, OpenCV, and PyAV. It turns a Windows PC with one or more USB webcams into a browser-accessible Network Video Recorder (NVR) with continuous 5-minute H.264 loop recording, structured disk storage on <code>C:</code>, rolling retention cleanup, and a modern two-tab dashboard.</p>
+<h3 id="current-feature-set-v020">Current Feature Set (<code>v0.2.0</code>)</h3>
+<ul>
+<li><strong>Multi-Camera USB Auto-Discovery:</strong> Automatically scans connected USB webcams on startup and on demand (<code>Scan USB</code>), pulls Windows PnP friendly device names, and persists per-camera configuration.</li>
+<li><strong>Live Multi-Camera Streaming:</strong> Independent background capture thread per camera serving simultaneous MJPEG viewers without exclusive hardware contention.</li>
+<li><strong>Continuous 5-Minute H.264 Loop Recording:</strong> Dedicated per-camera PyAV encoder thread recording browser-playable MP4 loops (<code>libx264</code> + <code>yuv420p</code> + <code>faststart</code>) with wall-clock PTS timing and auto-generated JPEG thumbnails.</li>
+<li><strong>Structured <code>C:\SurveillanceData</code> Storage:</strong> Organizes recordings by <code>&lt;camera_id&gt;/&lt;YYYY-MM-DD&gt;/&lt;HH-MM-SS&gt;.mp4</code> alongside <code>.jpg</code> thumbnails, <code>.meta.json</code> sidecars, snapshots, and <code>config.json</code>.</li>
+<li><strong>Rolling Storage Retention &amp; Star Protection:</strong> Automatically deletes the oldest unstarred clips past the configured size cap (default <strong>50 GB</strong>) or retention window (default <strong>7 days</strong>). Starred/locked clips are immune to automatic cleanup and manual deletion.</li>
+<li><strong>Two-Tab Web Dashboard:</strong></li>
+<li><strong>Cameras:</strong> Glassmorphic responsive Grid / Focus wall, live <code>REC</code> segment timers, loop progress bars, inline rename modal, timestamp toggle, fullscreen, and snapshot saving.</li>
+<li><strong>Recordings:</strong> Integrated HTML5 <code>&lt;video&gt;</code> theater with HTTP <code>206 Partial Content</code> scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed controls, prev/next loop stepping, camera/date/starred filters, star/lock toggle, download, and delete.</li>
+</ul>
+<hr />
+<h2 id="2-system-architecture">2. System Architecture</h2>
+<h3 id="module-map">Module Map</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app.py</code></td>
+<td>FastAPI application factory, lifespan hooks, MJPEG streaming endpoints, REST APIs for cameras/recordings/storage, and CLI entrypoint.</td>
+</tr>
+<tr>
+<td><code>camera.py</code></td>
+<td><code>CameraManager</code> (USB auto-discovery, Windows friendly name lookup, periodic retention sweep) and <code>CameraStream</code> (per-camera capture thread, timestamp HUD, MJPEG encoding, <code>frame_hooks</code>).</td>
+</tr>
+<tr>
+<td><code>recorder.py</code></td>
+<td><code>LoopRecorder</code> — isolated per-camera encoder thread converting BGR frames into rotating H.264 MP4 segments, thumbnails, and metadata sidecars.</td>
+</tr>
+<tr>
+<td><code>storage.py</code></td>
+<td><code>StorageManager</code> — structured path allocation under <code>C:\SurveillanceData</code>, path-traversal validation, clip indexing, star/lock persistence, and two-pass rolling retention cleanup.</td>
+</tr>
+<tr>
+<td><code>config.py</code></td>
+<td><code>AppSettings</code> and thread-safe <code>ConfigStore</code> persisted atomically to <code>C:\SurveillanceData\config.json</code>.</td>
+</tr>
+<tr>
+<td><code>static/index.html</code></td>
+<td>Semantic two-tab dashboard shell + native <code>&lt;dialog&gt;</code> modals for storage settings and camera renaming.</td>
+</tr>
+<tr>
+<td><code>static/styles.css</code></td>
+<td>Dark glassmorphic UI using CSS Grid, container queries (<code>@container</code>), logical properties, <code>aspect-ratio</code>, and CSS custom properties for progress bars.</td>
+</tr>
+<tr>
+<td><code>static/app.js</code></td>
+<td>State management, camera wall reconciliation, bandwidth-saving stream pausing on tab switch, recording theater controls, and API polling.</td>
+</tr>
+<tr>
+<td><code>scripts/sync_docs.py</code></td>
+<td>Deterministic generator converting <code>docs/DOCUMENTATION.md</code> into the standalone <code>docs/DOCUMENTATION.html</code> with drift checking (<code>--check</code>).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="data-threading-flow">Data &amp; Threading Flow</h3>
+<pre><code class="language-text">USB Webcam #N
+     │
+     ▼
+[CameraStream Capture Thread]  (OpenCV CAP_DSHOW + MJPG @ target FPS)
+     │
+     ├──► Optional frame_hooks (extensible for motion / AI detection)
+     ├──► Optional timestamp + REC overlay
+     │
+     ├──► Non-blocking Queue (max 60 frames)
+     │         │
+     │         ▼
+     │    [LoopRecorder Encoder Thread]  (PyAV libx264, yuv420p, movflags=faststart)
+     │         │
+     │         ▼  (every 5 min or on stop)
+     │    C:\SurveillanceData\recordings\&lt;cam_id&gt;\&lt;YYYY-MM-DD&gt;\&lt;HH-MM-SS&gt;.{mp4,jpg,meta.json}
+     │         │
+     │         ▼
+     │    [StorageManager.enforce_retention()]  (age pass -&gt; size cap pass; skips starred)
+     │
+     └──► JPEG Encode ──► Condition Notify ──► FastAPI /api/cameras/{id}/stream (MJPEG)
+                                                FastAPI /api/cameras/{id}/snapshot
+</code></pre>
+<hr />
+<h2 id="3-design-choices-architectural-decisions-adrs">3. Design Choices &amp; Architectural Decisions (ADRs)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Decision</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ADR-01</strong></td>
+<td><strong>FastAPI + Uvicorn over Flask</strong></td>
+<td>Native async streaming (<code>StreamingResponse</code>), clean Pydantic request validation, built-in lifespan startup/shutdown hooks, and zero-friction readiness for future WebSockets/SSE alerts.</td>
+</tr>
+<tr>
+<td><strong>ADR-02</strong></td>
+<td><strong>Single capture thread per camera with <code>threading.Condition</code></strong></td>
+<td>USB webcams on Windows lock exclusively to one process/handle. Broadcasting encoded frames via a condition variable lets unlimited browser tabs view the same camera with zero busy-waiting.</td>
+</tr>
+<tr>
+<td><strong>ADR-03</strong></td>
+<td><strong><code>CAP_DSHOW</code> + constructor <code>params</code> (<code>MJPG</code> fourcc) on Windows</strong></td>
+<td>DirectShow opens USB webcams faster than MSMF on Windows, and passing <code>CAP_PROP_FOURCC=MJPG</code>, width, height, and FPS directly to the <code>cv2.VideoCapture(idx, CAP_DSHOW, params)</code> constructor negotiates hardware MJPG (~30 FPS at 720p) instead of silently staying in uncompressed YUY2 (~7.5 FPS).</td>
+</tr>
+<tr>
+<td><strong>ADR-04</strong></td>
+<td><strong>PyAV (<code>libx264</code> / <code>yuv420p</code> / <code>faststart</code>) over OpenCV <code>VideoWriter</code></strong></td>
+<td>OpenCV's default <code>mp4v</code> codec does not play in Chrome/Edge HTML5 <code>&lt;video&gt;</code> elements. PyAV bundles <code>libx264</code> directly inside <code>.venv</code> (no external <code>ffmpeg</code> install required) and produces compact, browser-native MP4s with instant HTTP range scrubbing.</td>
+</tr>
+<tr>
+<td><strong>ADR-05</strong></td>
+<td><strong>Wall-clock millisecond PTS (<code>Fraction(1, 1000)</code>)</strong></td>
+<td>USB webcam framerates fluctuate with ambient lighting/auto-exposure (e.g., 8 FPS at night vs 30 FPS in daylight). Using monotonic wall-clock PTS guarantees every 5-minute clip plays back at accurate real-time speed.</td>
+</tr>
+<tr>
+<td><strong>ADR-06</strong></td>
+<td><strong>Atomic <code>.part.mp4</code> recording &amp; startup recovery</strong></td>
+<td>Recording into <code>.part.mp4</code> and renaming to <code>.mp4</code> on flush prevents the Recordings tab from listing incomplete/unplayable files. Stale <code>.part.mp4</code> files from power loss are cleaned on startup.</td>
+</tr>
+<tr>
+<td><strong>ADR-07</strong></td>
+<td><strong>Isolated recorder thread + bounded queue (<code>maxsize=60</code>)</strong></td>
+<td>Decouples H.264 CPU encoding and disk writes from the capture thread so live MJPEG monitoring stays responsive even under multi-camera load.</td>
+</tr>
+<tr>
+<td><strong>ADR-08</strong></td>
+<td><strong>Two-pass rolling retention with Star/Lock immunity</strong></td>
+<td>Protects <code>C:</code> from filling up during 24/7 recording (Pass 1: delete unlocked clips older than <code>max_retention_days</code>; Pass 2: delete oldest unlocked clips until under <code>max_storage_gb</code>), while guaranteeing starred clips are never pruned.</td>
+</tr>
+<tr>
+<td><strong>ADR-09</strong></td>
+<td><strong>Zero-build vanilla HTML/CSS/JS + pause streams on Recordings tab</strong></td>
+<td>Keeps the stack lightweight with zero Node build pipeline. Pausing hidden MJPEG <code>&lt;img&gt;</code> elements when switching to Recordings frees browser decoding/network resources for smooth MP4 playback.</td>
+</tr>
+<tr>
+<td><strong>ADR-10</strong></td>
+<td><strong>Single-source Markdown → HTML doc sync (<code>scripts/sync_docs.py</code>)</strong></td>
+<td>Keeps <code>docs/DOCUMENTATION.md</code> and standalone <code>docs/DOCUMENTATION.html</code> strictly synchronized with verifiable SHA-256 sync checks.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-storage-layout-data-schema">4. Storage Layout &amp; Data Schema</h2>
+<p>All runtime data is stored under <code>C:\SurveillanceData</code> (overridable via <code>SURVEILLANCE_DATA_DIR</code> or <code>--data-dir</code>):</p>
+<pre><code class="language-text">C:\SurveillanceData\
+├── config.json
+├── snapshots\
+│   └── cam-0_20261124_002510.jpg
+└── recordings\
+    └── cam-0\
+        └── 2026-11-24\
+            ├── 00-25-00.mp4         # Browser-playable H.264 MP4 (faststart)
+            ├── 00-25-00.jpg         # 480px JPEG preview thumbnail
+            └── 00-25-00.meta.json   # Sidecar metadata &amp; lock status
+</code></pre>
+<h3 id="recording-metadata-sidecar-metajson">Recording Metadata Sidecar (<code>*.meta.json</code>)</h3>
+<pre><code class="language-json">{
+  &quot;camera_id&quot;: &quot;cam-0&quot;,
+  &quot;camera_name&quot;: &quot;NexiGo N60 FHD Webcam&quot;,
+  &quot;started_at&quot;: &quot;2026-11-24T00:25:00&quot;,
+  &quot;ended_at&quot;: &quot;2026-11-24T00:30:00&quot;,
+  &quot;duration_seconds&quot;: 300.0,
+  &quot;width&quot;: 1280,
+  &quot;height&quot;: 720,
+  &quot;frames&quot;: 7420,
+  &quot;locked&quot;: false
+}
+</code></pre>
+<h3 id="persistent-configuration-csurveillancedataconfigjson">Persistent Configuration (<code>C:\SurveillanceData\config.json</code>)</h3>
+<pre><code class="language-json">{
+  &quot;segment_duration_seconds&quot;: 300,
+  &quot;max_storage_gb&quot;: 50.0,
+  &quot;max_retention_days&quot;: 7,
+  &quot;auto_record_new_cameras&quot;: true,
+  &quot;cameras&quot;: {
+    &quot;cam-0&quot;: {
+      &quot;id&quot;: &quot;cam-0&quot;,
+      &quot;index&quot;: 0,
+      &quot;name&quot;: &quot;NexiGo N60 FHD Webcam&quot;,
+      &quot;enabled&quot;: true,
+      &quot;recording&quot;: true,
+      &quot;show_timestamp&quot;: true,
+      &quot;width&quot;: 1280,
+      &quot;height&quot;: 720,
+      &quot;fps&quot;: 30
+    }
+  }
+}
+</code></pre>
+<hr />
+<h2 id="5-api-reference">5. API Reference</h2>
+<h3 id="multi-camera-endpoints">Multi-Camera Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cameras</code></td>
+<td>Returns all registered cameras with live telemetry, recording timers, storage stats, and settings.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/cameras/scan</code></td>
+<td>Probes USB indices (<code>0..max_probe_cameras</code>) and registers any newly connected cameras.</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/cameras/{cam_id}</code></td>
+<td>Updates camera fields: <code>name</code>, <code>recording</code>, <code>show_timestamp</code>, <code>enabled</code>. Persists to <code>config.json</code>.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cameras/{cam_id}/stream</code></td>
+<td>Live MJPEG stream (<code>multipart/x-mixed-replace; boundary=frame</code>).</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cameras/{cam_id}/snapshot</code></td>
+<td>Returns latest JPEG frame. Pass <code>?save=1</code> to also archive to <code>C:\SurveillanceData\snapshots\</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recordings-playback-endpoints">Recordings &amp; Playback Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/recordings</code></td>
+<td>Lists finalized clips (newest first). Query params: <code>camera_id</code>, <code>date</code> (<code>YYYY-MM-DD</code>), <code>starred_only</code> (<code>bool</code>).</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/recordings/media/{clip_id}</code></td>
+<td>Serves H.264 <code>.mp4</code> with HTTP <code>206 Partial Content</code> range support. Pass <code>?download=1</code> for attachment download.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/recordings/thumb/{clip_id}</code></td>
+<td>Serves the clip's JPEG preview thumbnail (<code>Cache-Control: max-age=3600</code>).</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/recordings/lock/{clip_id}</code></td>
+<td>Sets <code>{"locked": true | false}</code> to star/protect or unprotect a clip.</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/recordings/item/{clip_id}</code></td>
+<td>Deletes an unlocked clip + thumbnail + metadata. Returns <code>409 Conflict</code> if starred/locked.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="storage-retention-endpoints">Storage &amp; Retention Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/storage</code></td>
+<td>Returns <code>C:</code> disk space stats, total recordings bytes, clip/locked counts, and active retention settings.</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/storage/settings</code></td>
+<td>Updates <code>max_storage_gb</code>, <code>max_retention_days</code>, <code>segment_duration_seconds</code>, and <code>auto_record_new_cameras</code>, then runs retention cleanup.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/storage/cleanup</code></td>
+<td>Manually triggers rolling retention cleanup immediately.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="legacy-convenience-aliases-first-camera">Legacy Convenience Aliases (First Camera)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/video_feed</code></td>
+<td>MJPEG stream of the first registered camera.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/snapshot</code></td>
+<td>Latest JPEG snapshot of the first registered camera.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/status</code></td>
+<td>Summary status (<code>cameras_total</code>, <code>cameras_online</code>, <code>cameras_recording</code>, <code>storage</code>).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-configuration-environment-variables-cli">6. Configuration, Environment Variables &amp; CLI</h2>
+<h3 id="running-the-server">Running the Server</h3>
+<pre><code class="language-powershell"># Standard localhost startup
+.\.venv\Scripts\python.exe app.py
+
+# Custom storage path, port, or loop settings
+.\.venv\Scripts\python.exe app.py --host 127.0.0.1 --port 8000 --data-dir C:\SurveillanceData --segment-seconds 300 --max-storage-gb 50 --max-days 7
+</code></pre>
+<h3 id="environment-variables">Environment Variables</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SURVEILLANCE_DATA_DIR</code></td>
+<td><code>C:\SurveillanceData</code></td>
+<td>Root directory for recordings, snapshots, and <code>config.json</code>.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_HOST</code></td>
+<td><code>127.0.0.1</code></td>
+<td>Bind host (<code>0.0.0.0</code> to expose on LAN when ready).</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_PORT</code></td>
+<td><code>8000</code></td>
+<td>HTTP server port.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_SEGMENT_SECONDS</code></td>
+<td><code>300</code></td>
+<td>Default continuous loop duration in seconds (5 minutes).</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_MAX_STORAGE_GB</code></td>
+<td><code>50.0</code></td>
+<td>Rolling storage budget in GB (<code>0</code> disables size cap).</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_MAX_RETENTION_DAYS</code></td>
+<td><code>7</code></td>
+<td>Rolling age retention in days (<code>0</code> disables age cap).</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_AUTO_RECORD</code></td>
+<td><code>true</code></td>
+<td>Automatically start loop recording on newly discovered cameras.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_WIDTH</code></td>
+<td><code>1280</code></td>
+<td>Default requested capture width.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_HEIGHT</code></td>
+<td><code>720</code></td>
+<td>Default requested capture height.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_FPS</code></td>
+<td><code>30</code></td>
+<td>Default target capture FPS.</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_JPEG_QUALITY</code></td>
+<td><code>80</code></td>
+<td>MJPEG frame compression quality (<code>10–100</code>).</td>
+</tr>
+<tr>
+<td><code>SURVEILLANCE_MAX_CAMERAS</code></td>
+<td><code>8</code></td>
+<td>Upper USB index bound for camera auto-discovery.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-web-dashboard-guide">7. Web Dashboard Guide</h2>
+<ol>
+<li><strong>Header Bar:</strong> Switch between <strong>Cameras</strong> and <strong>Recordings</strong>, click the <strong>Storage</strong> pill to inspect <code>C:</code> disk space and adjust retention limits, or click <strong>Scan USB</strong> after plugging in additional webcams.</li>
+<li><strong>Cameras Tab:</strong>
+   - Switch between <strong>Grid</strong> (responsive multi-cam wall) and <strong>Focus</strong> (single expanded camera view).
+   - Each card shows live online status, pulsing <code>REC</code> loop timer + progress bar, resolution/FPS HUD, and quick actions (<strong>Rec On/Off</strong>, <strong>Snapshot</strong>, <strong>TS</strong>, <strong>Rename</strong>, <strong>Focus</strong>, <strong>Full</strong>).
+   - Toggling <strong>Rec On → Rec Off</strong> immediately flushes and saves the current loop so it appears in <strong>Recordings</strong>.</li>
+<li><strong>Recordings Tab:</strong>
+   - Filter clips by <strong>Camera</strong>, <strong>Date</strong>, or <strong>★ Starred Only</strong>.
+   - Play directly in the theater with native timeline scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed pills, <strong>Prev / Next</strong> loop navigation, <strong>Star</strong> protection, <strong>Download</strong>, and <strong>Delete</strong>.</li>
+</ol>
+<hr />
+<h2 id="8-keeping-docs-in-sync">8. Keeping Docs in Sync</h2>
+<p><code>docs/DOCUMENTATION.md</code> is the editable source file, and <code>docs/DOCUMENTATION.html</code> is generated deterministically from it.</p>
+<pre><code class="language-powershell"># Regenerate docs/DOCUMENTATION.html from docs/DOCUMENTATION.md
+.\.venv\Scripts\python.exe scripts/sync_docs.py
+
+# Verify both files are in sync (exits non-zero if out of sync)
+.\.venv\Scripts\python.exe scripts/sync_docs.py --check
+</code></pre>
+<hr />
+<h2 id="9-changelog">9. Changelog</h2>
+<h3 id="v022-2026-11-24"><code>v0.2.2</code> — 2026-11-24</h3>
+<ul>
+<li>Fixed DirectShow MJPG negotiation in <code>camera.py</code> by passing <code>CAP_PROP_FOURCC=MJPG</code>, width, height, and FPS via <code>cv2.VideoCapture(index, CAP_DSHOW, params)</code>, boosting USB 720p capture from ~7.5 FPS (<code>YUY2</code>) to ~30 FPS (<code>MJPG</code>).</li>
+<li>Enhanced <strong>Focus</strong> layout mode to expand to full theater width and show a quick camera switcher bar (<code>#focus-strip</code>) when multiple cameras are connected.</li>
+</ul>
+<h3 id="v021-2026-11-24"><code>v0.2.1</code> — 2026-11-24</h3>
+<ul>
+<li>Moved burned-in OpenCV timestamp overlay from top-left to bottom-left (<code>camera.py</code>) so it never overlaps the floating <code>LIVE</code> / <code>REC</code> HUD pills.</li>
+<li>Added global <code>[hidden] { display: none !important; }</code> rule in <code>static/styles.css</code> so turning off recording immediately hides the red <code>REC</code> badge instead of leaving it stuck at <code>00:00</code>.</li>
+<li>Cleared and unloaded <code>&lt;video&gt;</code> playback via <code>selectClip(null)</code> + <code>recordingPlayer.load()</code> when deleting recordings (including when the final clip is deleted).</li>
+</ul>
+<h3 id="v020-2026-11-24"><code>v0.2.0</code> — 2026-11-24</h3>
+<ul>
+<li>Added multi-camera USB auto-discovery (<code>CameraManager</code>, <code>Scan USB</code>, Windows friendly device names, persistent <code>config.json</code>).</li>
+<li>Added continuous 5-minute H.264 loop recording (<code>recorder.py</code> via PyAV <code>libx264</code> + <code>faststart</code> + JPEG thumbnails).</li>
+<li>Added structured <code>C:\SurveillanceData</code> storage layout (<code>storage.py</code>) with two-pass rolling retention (50 GB / 7 days default) and Star/Lock clip protection.</li>
+<li>Redesigned UI into a sleek glassmorphic two-tab dashboard (<strong>Cameras</strong> and <strong>Recordings</strong>) with Grid/Focus view, native <code>&lt;dialog&gt;</code> modals, playback speed controls, and HTTP range scrubbing.</li>
+<li>Added synchronized Markdown + standalone HTML documentation (<code>docs/DOCUMENTATION.md</code>, <code>docs/DOCUMENTATION.html</code>, <code>scripts/sync_docs.py</code>).</li>
+</ul>
+<h3 id="v010-2026-11-23"><code>v0.1.0</code> — 2026-11-23</h3>
+<ul>
+<li>Initial lightweight localhost FastAPI + OpenCV USB webcam streaming server (<code>app.py</code>, <code>camera.py</code>, <code>config.py</code>, <code>static/</code>).</li>
+<li>Added live MJPEG streaming (<code>/video_feed</code>), instant JPEG snapshot (<code>/snapshot</code>), telemetry (<code>/api/status</code>), and timestamp overlay toggle.</li>
+</ul>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const themeBtn = document.getElementById("btn-theme");
+        const saved = localStorage.getItem("homewatch-doc-theme");
+        if (saved === "light" || saved === "dark") {
+          root.dataset.theme = saved;
+        }
+        function syncLabel() {
+          themeBtn.textContent = root.dataset.theme === "dark" ? "Light" : "Dark";
+        }
+        syncLabel();
+        themeBtn.addEventListener("click", () => {
+          root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+          localStorage.setItem("homewatch-doc-theme", root.dataset.theme);
+          syncLabel();
+        });
+
+        // Wrap tables for horizontal overflow stability
+        document.querySelectorAll(".content table").forEach((table) => {
+          const wrap = document.createElement("div");
+          wrap.className = "table-wrap";
+          table.parentNode.insertBefore(wrap, table);
+          wrap.appendChild(table);
+        });
+
+        // Add copy buttons to fenced code blocks
+        document.querySelectorAll(".content pre").forEach((pre) => {
+          const wrap = document.createElement("div");
+          wrap.className = "code-wrap";
+          pre.parentNode.insertBefore(wrap, pre);
+          wrap.appendChild(pre);
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "copy-btn";
+          btn.textContent = "Copy";
+          btn.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(pre.textContent || "");
+              btn.textContent = "Copied";
+              setTimeout(() => (btn.textContent = "Copy"), 1500);
+            } catch {
+              btn.textContent = "Failed";
+            }
+          });
+          wrap.appendChild(btn);
+        });
+      })();
+    </script>
+  </body>
+</html>
