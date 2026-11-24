@@ -1,6 +1,6 @@
-# HomeWatch NVR (`surveillance_cam`)
+# EYEz (`surveillance_cam`)
 
-A lightweight multi-camera Python + FastAPI localhost home surveillance NVR for USB webcams, featuring continuous 5-minute H.264 loop recording, structured `C:\SurveillanceData` storage with rolling retention, and a sleek two-tab (**Cameras** and **Recordings**) dashboard.
+A lightweight multi-camera Python + FastAPI localhost home surveillance NVR for USB webcams, featuring a matte-black & tactical-orange **EYEz** dashboard rendered in **Iosevka**, click-to-focus camera grid cards, continuous 5-minute H.264 loop recording, and structured `C:\SurveillanceData` storage with rolling retention.
 
 ## Documentation
 

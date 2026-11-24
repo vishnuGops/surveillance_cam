@@ -50,6 +50,7 @@ class CameraConfig:
     enabled: bool = True
     recording: bool = True
     show_timestamp: bool = True
+    night_mode: str = "auto"
     width: int = 1280
     height: int = 720
     fps: int = 30
@@ -59,13 +60,17 @@ class CameraConfig:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "CameraConfig":
+        raw_nv = str(data.get("night_mode", "auto")).strip().lower()
+        if raw_nv not in {"auto", "on", "off"}:
+            raw_nv = "auto"
         return cls(
             id=str(data["id"]),
             index=int(data["index"]),
             name=str(data.get("name") or f"Camera {data['index']}"),
             enabled=bool(data.get("enabled", True)),
             recording=bool(data.get("recording", True)),
-            show_timestamp=bool(data.get("show_timestamp", True)),
+            show_timestamp=True,
+            night_mode=raw_nv,
             width=int(data.get("width", 1280)),
             height=int(data.get("height", 720)),
             fps=int(data.get("fps", 30)),
@@ -204,6 +209,7 @@ class ConfigStore:
         name: str | None = None,
         recording: bool | None = None,
         show_timestamp: bool | None = None,
+        night_mode: str | None = None,
         enabled: bool | None = None,
     ) -> CameraConfig | None:
         with self._lock:
@@ -218,6 +224,10 @@ class ConfigStore:
                 cam.recording = recording
             if show_timestamp is not None:
                 cam.show_timestamp = show_timestamp
+            if night_mode is not None:
+                cleaned_nv = night_mode.strip().lower()
+                if cleaned_nv in {"auto", "on", "off"}:
+                    cam.night_mode = cleaned_nv
             if enabled is not None:
                 cam.enabled = enabled
             self._save_unlocked()

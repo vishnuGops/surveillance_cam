@@ -155,6 +155,7 @@ class LoopRecorder:
         stream.height = even_h
         stream.pix_fmt = "yuv420p"
         stream.time_base = Fraction(1, 1000)
+        stream.codec_context.time_base = Fraction(1, 1000)
         stream.options = {
             "preset": "ultrafast",
             "tune": "zerolatency",
@@ -204,7 +205,7 @@ class LoopRecorder:
         except Exception:
             logger.exception("[%s] Failed writing thumbnail", self.camera_id)
 
-    def _close_segment(self) -> None:
+    def _close_segment(self, *, discard: bool = False) -> None:
         if self._container is None or self._seg_paths is None:
             return
 
@@ -230,7 +231,7 @@ class LoopRecorder:
             self._thumb_saved = False
 
         try:
-            if stream is not None and frames_written > 0:
+            if not discard and stream is not None and frames_written > 0:
                 for packet in stream.encode():
                     container.mux(packet)
             container.close()
@@ -244,7 +245,7 @@ class LoopRecorder:
             thumb_jpg.unlink(missing_ok=True)
             return
 
-        if frames_written < 2 or not part_mp4.exists() or part_mp4.stat().st_size < 1024:
+        if discard or frames_written < 2 or not part_mp4.exists() or part_mp4.stat().st_size < 1024:
             part_mp4.unlink(missing_ok=True)
             thumb_jpg.unlink(missing_ok=True)
             return
@@ -362,6 +363,7 @@ class LoopRecorder:
                     with self._lock:
                         self._last_error = f"Encode error: {exc}"
                     logger.exception("[%s] Encode error", self.camera_id)
-                    self._close_segment()
+                    self._close_segment(discard=True)
+                    self._stop_event.wait(0.5)
         finally:
             self._close_segment()

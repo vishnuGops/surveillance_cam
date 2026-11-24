@@ -3,24 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HomeWatch NVR — Multi-Camera Surveillance</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.2.2" />
+    <title>EYEz // Tactical Surveillance Matrix</title>
+    <link rel="stylesheet" href="/static/styles.css?v=0.4.1" />
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="12" cy="12" r="8.5" />
-              <circle cx="12" cy="12" r="3.5" />
-              <circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none" />
+            <svg viewBox="0 0 32 32" fill="none">
+              <path
+                d="M2.5 16L8.5 8.5H23.5L29.5 16L23.5 23.5H8.5L2.5 16Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+              />
+              <path
+                d="M16 10.5L21 16L16 21.5L11 16L16 10.5Z"
+                stroke="#ff6a00"
+                stroke-width="1.6"
+              />
+              <circle cx="16" cy="16" r="2.2" fill="#ff6a00" />
+              <path d="M16 3V6.5M16 25.5V29M2 16H5.5M26.5 16H30" stroke="#ff6a00" stroke-width="1.4" />
             </svg>
           </div>
           <div class="brand-copy">
-            <h1>HomeWatch NVR</h1>
+            <div class="brand-title-row">
+              <h1>EYE<span class="brand-accent">z</span></h1>
+            </div>
             <p class="system-summary" id="system-summary" aria-live="polite">
-              Initializing cameras...
+              INITIALIZING SENSOR ARRAY...
             </p>
           </div>
         </div>
@@ -34,11 +45,8 @@
             aria-selected="true"
             aria-controls="panel-cameras"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <rect x="2.5" y="5.5" width="14" height="13" rx="2.5" />
-              <path d="M16.5 10l5-3v10l-5-3" />
-            </svg>
-            <span>Cameras</span>
+            <span class="tab-code">01</span>
+            <span>CAMERAS</span>
             <span class="tab-badge" id="badge-cameras">0</span>
           </button>
 
@@ -50,11 +58,8 @@
             aria-selected="false"
             aria-controls="panel-recordings"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="2.5" />
-              <path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none" />
-            </svg>
-            <span>Recordings</span>
+            <span class="tab-code">02</span>
+            <span>RECORDINGS</span>
             <span class="tab-badge" id="badge-recordings">0</span>
           </button>
         </nav>
@@ -67,7 +72,7 @@
             aria-label="Open storage and retention settings"
           >
             <span class="storage-pill-top">
-              <span class="storage-label" id="storage-pill-label">Storage</span>
+              <span class="storage-label">VAULT</span>
               <span class="storage-meta" id="storage-pill-meta">-- / 50 GB</span>
             </span>
             <span class="storage-bar-track" aria-hidden="true">
@@ -76,11 +81,7 @@
           </button>
 
           <button type="button" class="btn btn-accent" id="btn-scan-cameras">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-              <path d="M21 4v5h-5" />
-            </svg>
-            <span>Scan USB</span>
+            <span>SCAN USB</span>
           </button>
         </div>
       </header>
@@ -95,33 +96,53 @@
         >
           <div class="panel-toolbar">
             <div class="toolbar-group">
-              <span class="toolbar-title">Live Feeds</span>
+              <span class="toolbar-kicker" id="camera-mode-label">MATRIX // GRID VIEW</span>
               <span class="toolbar-hint" id="camera-toolbar-hint">
-                Continuous 5-min H.264 loops saved to C:\SurveillanceData
+                SELECT ANY CAMERA CARD TO FOCUS · 5-MIN H.264 LOOPS → C:\SurveillanceData
               </span>
             </div>
 
             <div class="toolbar-group">
               <div class="segmented" role="group" aria-label="Camera wall layout">
-                <button type="button" class="seg-btn is-active" id="btn-layout-grid" aria-pressed="true">
-                  Grid
+                <button
+                  type="button"
+                  class="seg-btn is-active"
+                  id="btn-layout-grid"
+                  aria-pressed="true"
+                >
+                  GRID
                 </button>
-                <button type="button" class="seg-btn" id="btn-layout-focus" aria-pressed="false">
-                  Focus
+                <button
+                  type="button"
+                  class="seg-btn"
+                  id="btn-layout-focus"
+                  aria-pressed="false"
+                >
+                  FOCUS
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="focus-strip" id="focus-strip" hidden role="group" aria-label="Select focused camera"></div>
+          <div class="focus-bar" id="focus-bar" hidden>
+            <button type="button" class="btn btn-sm btn-accent-outline" id="btn-back-to-grid">
+              ← BACK TO GRID
+            </button>
+            <div
+              class="focus-strip"
+              id="focus-strip"
+              role="group"
+              aria-label="Select focused camera"
+            ></div>
+          </div>
 
           <div class="camera-wall" id="camera-wall" data-layout="grid"></div>
 
           <div class="empty-state" id="cameras-empty" hidden>
-            <h2>No USB cameras detected</h2>
+            <h2>NO ACTIVE CAMERA NODES</h2>
             <p>
-              Connect one or more USB webcams to this PC and click
-              <strong>Scan USB</strong> to add them automatically.
+              Connect one or more USB webcams to this terminal and select
+              <strong>SCAN USB</strong> to register live feeds.
             </p>
           </div>
         </section>
@@ -137,6 +158,11 @@
           <div class="recordings-layout">
             <div class="theater-card">
               <div class="theater-stage" id="theater-stage">
+                <span class="reticle reticle-tl" aria-hidden="true"></span>
+                <span class="reticle reticle-tr" aria-hidden="true"></span>
+                <span class="reticle reticle-bl" aria-hidden="true"></span>
+                <span class="reticle reticle-br" aria-hidden="true"></span>
+
                 <video
                   id="recording-player"
                   controls
@@ -145,14 +171,39 @@
                   width="1280"
                   height="720"
                 ></video>
+
+                <div class="video-center-overlay" id="video-center-overlay" hidden>
+                  <button
+                    type="button"
+                    class="center-action-btn"
+                    id="btn-center-action"
+                    aria-label="Play video"
+                  >
+                    <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M8 5.5v13l11-6.5-11-6.5z" />
+                    </svg>
+                    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <rect x="6.5" y="5.5" width="4" height="13" />
+                      <rect x="13.5" y="5.5" width="4" height="13" />
+                    </svg>
+                  </button>
+
+                  <div
+                    class="center-buffer-ring"
+                    id="center-buffer-ring"
+                    role="status"
+                    aria-label="Buffering video"
+                    hidden
+                  >
+                    <span class="buffer-spinner" aria-hidden="true"></span>
+                  </div>
+                </div>
+
                 <div class="theater-placeholder" id="theater-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2.5" />
-                    <path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none" />
-                  </svg>
-                  <h2>Select a recorded loop</h2>
+                  <div class="placeholder-glyph" aria-hidden="true">[ ARCHIVE STANDBY ]</div>
+                  <h2>SELECT A RECORDED LOOP</h2>
                   <p>
-                    5-minute H.264 recordings appear automatically once each loop finishes (or when you stop recording on a camera).
+                    5-minute H.264 segments are indexed automatically on loop completion or when recording is toggled off.
                   </p>
                 </div>
               </div>
@@ -161,7 +212,7 @@
                 <div class="clip-headline">
                   <div class="clip-title-row">
                     <h2 id="player-clip-title">--</h2>
-                    <span class="pill pill-star" id="player-locked-badge" hidden>Protected</span>
+                    <span class="pill pill-star" id="player-locked-badge" hidden>LOCKED</span>
                   </div>
                   <p class="clip-submeta" id="player-clip-meta">--</p>
                 </div>
@@ -175,16 +226,16 @@
                   </div>
 
                   <div class="clip-actions">
-                    <button type="button" class="btn btn-sm" id="btn-prev-clip">Prev</button>
-                    <button type="button" class="btn btn-sm" id="btn-next-clip">Next</button>
+                    <button type="button" class="btn btn-sm" id="btn-prev-clip">PREV</button>
+                    <button type="button" class="btn btn-sm" id="btn-next-clip">NEXT</button>
                     <button type="button" class="btn btn-sm" id="btn-toggle-star" aria-pressed="false">
-                      Star
+                      STAR
                     </button>
                     <a class="btn btn-sm" id="btn-download-clip" href="#" download>
-                      Download
+                      DOWNLOAD
                     </a>
                     <button type="button" class="btn btn-sm btn-danger" id="btn-delete-clip">
-                      Delete
+                      DELETE
                     </button>
                   </div>
                 </div>
@@ -192,16 +243,21 @@
             </div>
 
             <aside class="clip-library" aria-label="Recorded clips">
+              <div class="library-title-bar">
+                <span>ARCHIVE INDEX</span>
+                <span id="clip-storage-label">0 MB</span>
+              </div>
+
               <search class="library-filters">
                 <div class="filter-row">
                   <label class="sr-only" for="filter-camera">Filter by camera</label>
                   <select id="filter-camera" class="select-input">
-                    <option value="">All Cameras</option>
+                    <option value="">ALL CAMERAS</option>
                   </select>
 
                   <label class="sr-only" for="filter-date">Filter by date</label>
                   <select id="filter-date" class="select-input">
-                    <option value="">All Dates</option>
+                    <option value="">ALL DATES</option>
                   </select>
                 </div>
 
@@ -212,23 +268,23 @@
                     id="btn-filter-starred"
                     aria-pressed="false"
                   >
-                    ★ Starred Only
+                    ★ LOCKED ONLY
                   </button>
                   <button type="button" class="btn btn-sm" id="btn-refresh-recordings">
-                    Refresh
+                    REFRESH
                   </button>
                 </div>
               </search>
 
               <div class="clip-list-header">
-                <span id="clip-count-label">0 clips</span>
-                <span id="clip-storage-label">0 MB</span>
+                <span id="clip-count-label">0 CLIPS</span>
+                <span>NEWEST FIRST</span>
               </div>
 
               <ul class="clip-list" id="clip-list"></ul>
 
               <div class="empty-state compact" id="recordings-empty" hidden>
-                <p>No recorded loops match your filters yet.</p>
+                <p>NO RECORDED LOOPS MATCH CURRENT FILTERS.</p>
               </div>
             </aside>
           </div>
@@ -240,7 +296,7 @@
     <dialog class="modal" id="dialog-storage" closedby="any" aria-labelledby="dialog-storage-title">
       <div class="modal-header">
         <div>
-          <h2 id="dialog-storage-title">Storage &amp; Loop Recording</h2>
+          <h2 id="dialog-storage-title">VAULT &amp; LOOP RETENTION</h2>
           <p class="modal-subtitle" id="modal-storage-path">C:\SurveillanceData</p>
         </div>
         <button type="button" class="icon-btn" id="btn-close-storage" aria-label="Close settings">
@@ -250,15 +306,15 @@
 
       <div class="modal-stats">
         <div class="stat-box">
-          <span class="stat-label">Recordings Used</span>
+          <span class="stat-label">VAULT USED</span>
           <strong class="stat-val" id="modal-rec-used">--</strong>
         </div>
         <div class="stat-box">
-          <span class="stat-label">Saved Loops</span>
+          <span class="stat-label">SAVED LOOPS</span>
           <strong class="stat-val" id="modal-rec-count">--</strong>
         </div>
         <div class="stat-box">
-          <span class="stat-label">C: Free Space</span>
+          <span class="stat-label">C: FREE</span>
           <strong class="stat-val" id="modal-disk-free">--</strong>
         </div>
       </div>
@@ -266,34 +322,34 @@
       <form class="modal-form" id="form-storage-settings">
         <div class="field-grid">
           <label class="field">
-            <span>Max Storage Cap (GB)</span>
+            <span>MAX STORAGE CAP (GB)</span>
             <input type="number" id="input-max-gb" min="0" max="10000" step="1" required />
-            <small>0 disables size cap. Starred clips are never auto-deleted.</small>
+            <small>0 disables size cap. Starred clips are never purged.</small>
           </label>
 
           <label class="field">
-            <span>Keep Recordings (Days)</span>
+            <span>RETENTION WINDOW (DAYS)</span>
             <input type="number" id="input-max-days" min="0" max="3650" step="1" required />
-            <small>0 keeps clips indefinitely until storage cap is reached.</small>
+            <small>0 retains indefinitely until size cap is reached.</small>
           </label>
 
           <label class="field">
-            <span>Loop Segment Length (Minutes)</span>
+            <span>LOOP SEGMENT (MINUTES)</span>
             <input type="number" id="input-seg-minutes" min="1" max="60" step="1" required />
-            <small>Default is 5-minute continuous H.264 loops.</small>
+            <small>Default 5-minute continuous H.264 loops.</small>
           </label>
 
           <label class="field checkbox-field">
             <input type="checkbox" id="input-auto-record" />
-            <span>Auto-record newly discovered USB cameras</span>
+            <span>Auto-record newly discovered USB camera nodes</span>
           </label>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn" id="btn-run-cleanup">Run Cleanup Now</button>
+          <button type="button" class="btn" id="btn-run-cleanup">PURGE EXPIRED</button>
           <div class="modal-footer-right">
-            <button type="button" class="btn" id="btn-cancel-storage">Cancel</button>
-            <button type="submit" class="btn btn-accent">Save Settings</button>
+            <button type="button" class="btn" id="btn-cancel-storage">CANCEL</button>
+            <button type="submit" class="btn btn-accent">APPLY</button>
           </div>
         </div>
       </form>
@@ -302,26 +358,26 @@
     <!-- RENAME CAMERA DIALOG -->
     <dialog class="modal modal-sm" id="dialog-rename" closedby="any" aria-labelledby="dialog-rename-title">
       <div class="modal-header">
-        <h2 id="dialog-rename-title">Rename Camera</h2>
+        <h2 id="dialog-rename-title">RENAME CAMERA NODE</h2>
         <button type="button" class="icon-btn" id="btn-close-rename" aria-label="Close rename dialog">
           ✕
         </button>
       </div>
       <form class="modal-form" id="form-rename">
         <label class="field">
-          <span>Camera Display Name</span>
+          <span>DESIGNATION / DISPLAY NAME</span>
           <input
             type="text"
             id="input-camera-name"
             maxlength="60"
             required
-            placeholder="e.g. Front Door, Living Room, Garage"
+            placeholder="e.g. FRONT ENTRY, PERIMETER NORTH, GARAGE"
           />
         </label>
         <div class="modal-footer">
           <div class="modal-footer-right">
-            <button type="button" class="btn" id="btn-cancel-rename">Cancel</button>
-            <button type="submit" class="btn btn-accent">Save Name</button>
+            <button type="button" class="btn" id="btn-cancel-rename">CANCEL</button>
+            <button type="submit" class="btn btn-accent">COMMIT NAME</button>
           </div>
         </div>
       </form>
@@ -329,6 +385,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="/static/app.js?v=0.2.2" defer></script>
+    <script src="/static/app.js?v=0.4.1" defer></script>
   </body>
 </html>

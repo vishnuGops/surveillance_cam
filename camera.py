@@ -15,6 +15,7 @@ from typing import Any, Callable
 import cv2
 
 from config import AppSettings, CameraConfig, ConfigStore
+from night_vision import NightVisionProcessor
 from recorder import LoopRecorder
 from storage import StorageManager
 
@@ -84,6 +85,7 @@ class CameraStream:
         self.settings = settings
         self.storage = storage
         self.frame_hooks: list[FrameHook] = []
+        self.night_vision = NightVisionProcessor(mode=cam_config.night_mode)
 
         self.recorder = LoopRecorder(
             camera_id=cam_config.id,
@@ -139,6 +141,9 @@ class CameraStream:
         self.config.recording = enabled
         self.recorder.set_enabled(enabled and self.config.enabled)
 
+    def set_night_mode(self, mode: str) -> None:
+        self.config.night_mode = self.night_vision.set_mode(mode)
+
     def set_enabled(self, enabled: bool) -> None:
         self.config.enabled = enabled
         if enabled:
@@ -173,6 +178,7 @@ class CameraStream:
 
     def get_status(self) -> dict[str, Any]:
         rec_status = self.recorder.get_status()
+        nv_status = self.night_vision.get_status()
         with self._cond:
             return {
                 "id": self.config.id,
@@ -187,6 +193,7 @@ class CameraStream:
                 "fps": round(self._fps, 1),
                 "target_fps": self.config.fps,
                 "show_timestamp": self.config.show_timestamp,
+                "night_vision": nv_status,
                 "active_viewers": self._active_viewers,
                 "uptime_seconds": round(time.monotonic() - self._started_at, 1),
                 "error": self._error,
@@ -251,9 +258,10 @@ class CameraStream:
                 cap.release()
         return None
 
-    def _draw_overlay(self, frame: Any) -> None:
+    def _draw_overlay(self, frame: Any, *, night_active: bool = False) -> None:
         now_text = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
-        label = f"{self.config.name}  |  {now_text}"
+        nv_tag = "  |  NV" if night_active else ""
+        label = f"{self.config.name}  |  {now_text}{nv_tag}"
 
         font = cv2.FONT_HERSHEY_SIMPLEX
         scale = 0.54
@@ -328,6 +336,8 @@ class CameraStream:
                     consecutive_failures = 0
                     now = time.monotonic()
 
+                    frame, night_active = self.night_vision.process(frame, now)
+
                     for hook in self.frame_hooks:
                         try:
                             processed = hook(frame, now)
@@ -336,8 +346,7 @@ class CameraStream:
                         except Exception:
                             logger.exception("[%s] Frame hook failed", self.config.id)
 
-                    if self.config.show_timestamp:
-                        self._draw_overlay(frame)
+                    self._draw_overlay(frame, night_active=night_active)
 
                     if self.recorder.enabled:
                         self.recorder.submit_frame(frame, now)
@@ -519,6 +528,7 @@ class CameraManager:
         name: str | None = None,
         recording: bool | None = None,
         show_timestamp: bool | None = None,
+        night_mode: str | None = None,
         enabled: bool | None = None,
     ) -> dict[str, Any] | None:
         with self._lock:
@@ -530,11 +540,14 @@ class CameraManager:
                 name=name,
                 recording=recording,
                 show_timestamp=show_timestamp,
+                night_mode=night_mode,
                 enabled=enabled,
             )
             if updated_cfg is None:
                 return None
             stream.config = updated_cfg
+            if night_mode is not None:
+                stream.set_night_mode(updated_cfg.night_mode)
             if enabled is not None:
                 stream.set_enabled(enabled)
             elif recording is not None:

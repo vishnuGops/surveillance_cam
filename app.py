@@ -33,7 +33,7 @@ STATIC_DIR = BASE_DIR / "static"
 class CameraUpdatePayload(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=60)
     recording: bool | None = None
-    show_timestamp: bool | None = None
+    night_mode: str | None = Field(default=None, pattern="^(auto|on|off)$")
     enabled: bool | None = None
 
 
@@ -101,8 +101,8 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
             await asyncio.to_thread(manager.stop)
 
     app = FastAPI(
-        title="Home Surveillance NVR",
-        version="0.2.0",
+        title="EYEz Surveillance NVR",
+        version="0.3.0",
         lifespan=lifespan,
     )
     app.state.settings = cfg
@@ -145,7 +145,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
             cam_id,
             name=payload.name,
             recording=payload.recording,
-            show_timestamp=payload.show_timestamp,
+            night_mode=payload.night_mode,
             enabled=payload.enabled,
         )
         if updated is None:
@@ -414,7 +414,7 @@ if __name__ == "__main__":
     )
     runtime_app = create_app(runtime_settings)
     print(
-        f"Home Surveillance NVR running at http://{runtime_settings.host}:{runtime_settings.port} "
+        f"EYEz Surveillance NVR running at http://{runtime_settings.host}:{runtime_settings.port} "
         f"(storage: {runtime_settings.data_dir})"
     )
     uvicorn.run(

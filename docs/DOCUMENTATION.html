@@ -3,36 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="doc-source-sha256" content="d4bcb92a90580f0ba61ff29ff7cb1c3d68ad5c65d05881fdb92a3c688afb0104" />
-    <title>HomeWatch NVR — Project &amp; Architecture Documentation</title>
+    <meta name="doc-source-sha256" content="9860ac21e6f3b51ea48fe57f7cbf263b105dbff3ff33559d21bf090db4eef1bb" />
+    <title>EYEz — Project &amp; Architecture Documentation</title>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #080c14;
-        --surface: #101724;
-        --surface-2: #172033;
-        --border: rgb(148 163 184 / 16%);
-        --border-strong: rgb(148 163 184 / 30%);
-        --text: #edf2f7;
-        --muted: #94a3b8;
-        --accent: #60a5fa;
-        --accent-soft: rgb(59 130 246 / 14%);
-        --code-bg: #0b111d;
-        --radius: 12px;
+        --bg: #070708;
+        --surface: #0e0e11;
+        --surface-2: #15151a;
+        --border: #23232a;
+        --border-strong: #363642;
+        --text: #ededf0;
+        --muted: #848494;
+        --accent: #ff6a00;
+        --accent-soft: rgb(255 106 0 / 13%);
+        --code-bg: #050506;
+        --radius: 4px;
       }
 
       :root[data-theme="light"] {
         color-scheme: light;
-        --bg: #f8fafc;
+        --bg: #f5f5f7;
         --surface: #ffffff;
-        --surface-2: #f1f5f9;
-        --border: rgb(15 23 42 / 12%);
-        --border-strong: rgb(15 23 42 / 24%);
-        --text: #0f172a;
-        --muted: #475569;
-        --accent: #2563eb;
-        --accent-soft: rgb(37 99 235 / 10%);
-        --code-bg: #0f172a;
+        --surface-2: #ececf0;
+        --border: rgb(15 15 20 / 13%);
+        --border-strong: rgb(15 15 20 / 26%);
+        --text: #111114;
+        --muted: #52525c;
+        --accent: #d95700;
+        --accent-soft: rgb(217 87 0 / 10%);
+        --code-bg: #111114;
       }
 
       *,
@@ -50,7 +50,7 @@
         min-block-size: 100dvb;
         background: var(--bg);
         color: var(--text);
-        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-family: "Iosevka", ui-monospace, SFMono-Regular, Consolas, monospace;
         line-height: 1.65;
       }
 
@@ -329,14 +329,14 @@
     <div class="doc-shell">
       <aside class="sidebar" aria-label="Document navigation">
         <div class="sidebar-header">
-          <span class="sidebar-brand">HomeWatch NVR Docs</span>
+          <span class="sidebar-brand">EYEz // DOCS</span>
           <button type="button" class="theme-btn" id="btn-theme">Light</button>
         </div>
         <p class="toc-title">On This Page</p>
         <nav class="toc"><div class="toc">
 <ul>
 <li><a href="#1-overview">1. Overview</a><ul>
-<li><a href="#current-feature-set-v020">Current Feature Set (v0.2.0)</a></li>
+<li><a href="#current-feature-set-v030">Current Feature Set (v0.3.0)</a></li>
 </ul>
 </li>
 <li><a href="#2-system-architecture">2. System Architecture</a><ul>
@@ -365,6 +365,11 @@
 <li><a href="#7-web-dashboard-guide">7. Web Dashboard Guide</a></li>
 <li><a href="#8-keeping-docs-in-sync">8. Keeping Docs in Sync</a></li>
 <li><a href="#9-changelog">9. Changelog</a><ul>
+<li><a href="#v041-2026-11-24">v0.4.1 — 2026-11-24</a></li>
+<li><a href="#v040-2026-11-24">v0.4.0 — 2026-11-24</a></li>
+<li><a href="#v032-2026-11-24">v0.3.2 — 2026-11-24</a></li>
+<li><a href="#v031-2026-11-24">v0.3.1 — 2026-11-24</a></li>
+<li><a href="#v030-2026-11-24">v0.3.0 — 2026-11-24</a></li>
 <li><a href="#v022-2026-11-24">v0.2.2 — 2026-11-24</a></li>
 <li><a href="#v021-2026-11-24">v0.2.1 — 2026-11-24</a></li>
 <li><a href="#v020-2026-11-24">v0.2.0 — 2026-11-24</a></li>
@@ -376,28 +381,28 @@
 </nav>
         <div class="sync-meta">
           Synced from DOCUMENTATION.md<br />
-          SHA-256: d4bcb92a9058
+          SHA-256: 9860ac21e6f3
         </div>
       </aside>
 
       <main class="content">
-        <h1 id="homewatch-nvr-project-architecture-documentation">HomeWatch NVR — Project &amp; Architecture Documentation</h1>
+        <h1 id="eyez-project-architecture-documentation">EYEz — Project &amp; Architecture Documentation</h1>
 <blockquote>
 <p><strong>Single Source of Truth:</strong> This document (<code>docs/DOCUMENTATION.md</code>) is synchronized with <code>docs/DOCUMENTATION.html</code> via <code>python scripts/sync_docs.py</code>. Every feature change, API addition, or architectural decision must be recorded here and synced.</p>
 </blockquote>
 <hr />
 <h2 id="1-overview">1. Overview</h2>
-<p><strong>HomeWatch NVR (<code>surveillance_cam</code>)</strong> is a lightweight, local-first multi-camera home surveillance application built with Python, FastAPI, OpenCV, and PyAV. It turns a Windows PC with one or more USB webcams into a browser-accessible Network Video Recorder (NVR) with continuous 5-minute H.264 loop recording, structured disk storage on <code>C:</code>, rolling retention cleanup, and a modern two-tab dashboard.</p>
-<h3 id="current-feature-set-v020">Current Feature Set (<code>v0.2.0</code>)</h3>
+<p><strong>EYEz (<code>surveillance_cam</code>)</strong> is a lightweight, local-first multi-camera home surveillance application built with Python, FastAPI, OpenCV, and PyAV. It turns a Windows PC with one or more USB webcams into a matte-black &amp; tactical-orange Network Video Recorder (NVR) with continuous 5-minute H.264 loop recording, structured disk storage on <code>C:</code>, rolling retention cleanup, and a Batcomputer-inspired two-tab dashboard rendered entirely in <strong>Iosevka</strong>.</p>
+<h3 id="current-feature-set-v030">Current Feature Set (<code>v0.3.0</code>)</h3>
 <ul>
-<li><strong>Multi-Camera USB Auto-Discovery:</strong> Automatically scans connected USB webcams on startup and on demand (<code>Scan USB</code>), pulls Windows PnP friendly device names, and persists per-camera configuration.</li>
-<li><strong>Live Multi-Camera Streaming:</strong> Independent background capture thread per camera serving simultaneous MJPEG viewers without exclusive hardware contention.</li>
+<li><strong>Multi-Camera USB Auto-Discovery:</strong> Automatically scans connected USB webcams on startup and on demand (<code>SCAN USB</code>), pulls Windows PnP friendly device names, and persists per-camera configuration.</li>
+<li><strong>Live Multi-Camera Streaming (<code>30 FPS</code> MJPG):</strong> Independent background capture thread per camera using DirectShow constructor parameters (<code>CAP_PROP_FOURCC=MJPG</code>) serving simultaneous MJPEG viewers without hardware contention.</li>
 <li><strong>Continuous 5-Minute H.264 Loop Recording:</strong> Dedicated per-camera PyAV encoder thread recording browser-playable MP4 loops (<code>libx264</code> + <code>yuv420p</code> + <code>faststart</code>) with wall-clock PTS timing and auto-generated JPEG thumbnails.</li>
 <li><strong>Structured <code>C:\SurveillanceData</code> Storage:</strong> Organizes recordings by <code>&lt;camera_id&gt;/&lt;YYYY-MM-DD&gt;/&lt;HH-MM-SS&gt;.mp4</code> alongside <code>.jpg</code> thumbnails, <code>.meta.json</code> sidecars, snapshots, and <code>config.json</code>.</li>
 <li><strong>Rolling Storage Retention &amp; Star Protection:</strong> Automatically deletes the oldest unstarred clips past the configured size cap (default <strong>50 GB</strong>) or retention window (default <strong>7 days</strong>). Starred/locked clips are immune to automatic cleanup and manual deletion.</li>
-<li><strong>Two-Tab Web Dashboard:</strong></li>
-<li><strong>Cameras:</strong> Glassmorphic responsive Grid / Focus wall, live <code>REC</code> segment timers, loop progress bars, inline rename modal, timestamp toggle, fullscreen, and snapshot saving.</li>
-<li><strong>Recordings:</strong> Integrated HTML5 <code>&lt;video&gt;</code> theater with HTTP <code>206 Partial Content</code> scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed controls, prev/next loop stepping, camera/date/starred filters, star/lock toggle, download, and delete.</li>
+<li><strong>EYEz Two-Tab Tactical Dashboard (Matte Black + Orange + Iosevka):</strong></li>
+<li><strong>Cameras (<code>01</code>):</strong> Multi-column Grid view with labeled camera cards (<code>CH-01 // NAME</code>), targeting reticles, click-to-focus cards, expansion standby slot when 1 camera is connected, and full-width Focus theater with <code>← BACK TO GRID</code> and channel switcher pills.</li>
+<li><strong>Recordings (<code>02</code>):</strong> Integrated HTML5 <code>&lt;video&gt;</code> theater with HTTP <code>206 Partial Content</code> scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed controls, prev/next loop stepping, camera/date/locked filters, star/lock toggle, download, and delete.</li>
 </ul>
 <hr />
 <h2 id="2-system-architecture">2. System Architecture</h2>
@@ -416,7 +421,11 @@
 </tr>
 <tr>
 <td><code>camera.py</code></td>
-<td><code>CameraManager</code> (USB auto-discovery, Windows friendly name lookup, periodic retention sweep) and <code>CameraStream</code> (per-camera capture thread, timestamp HUD, MJPEG encoding, <code>frame_hooks</code>).</td>
+<td><code>CameraManager</code> (USB auto-discovery, Windows friendly name lookup, periodic retention sweep) and <code>CameraStream</code> (per-camera capture thread, night vision hook, timestamp HUD, MJPEG encoding, <code>frame_hooks</code>).</td>
+</tr>
+<tr>
+<td><code>night_vision.py</code></td>
+<td><code>NightVisionProcessor</code> — per-camera low-light software night vision (<code>auto</code> / <code>on</code> / <code>off</code>) with luminance hysteresis, precomputed shadow-lift gamma LUT, <code>YCrCb</code> CLAHE contrast, and motion-aware temporal denoising.</td>
 </tr>
 <tr>
 <td><code>recorder.py</code></td>
@@ -436,7 +445,11 @@
 </tr>
 <tr>
 <td><code>static/styles.css</code></td>
-<td>Dark glassmorphic UI using CSS Grid, container queries (<code>@container</code>), logical properties, <code>aspect-ratio</code>, and CSS custom properties for progress bars.</td>
+<td>Matte-black + tactical-orange EYEz design system with bundled <code>Iosevka</code> <code>@font-face</code> rules, corner targeting reticles, CSS Grid, and container queries (<code>@container</code>).</td>
+</tr>
+<tr>
+<td><code>static/fonts/</code></td>
+<td>Locally bundled <code>Iosevka</code> Latin <code>.woff2</code> weights (<code>400</code>, <code>500</code>, <code>600</code>, <code>700</code>) for 100% offline localhost rendering.</td>
 </tr>
 <tr>
 <td><code>static/app.js</code></td>
@@ -504,8 +517,8 @@
 </tr>
 <tr>
 <td><strong>ADR-05</strong></td>
-<td><strong>Wall-clock millisecond PTS (<code>Fraction(1, 1000)</code>)</strong></td>
-<td>USB webcam framerates fluctuate with ambient lighting/auto-exposure (e.g., 8 FPS at night vs 30 FPS in daylight). Using monotonic wall-clock PTS guarantees every 5-minute clip plays back at accurate real-time speed.</td>
+<td><strong>Wall-clock millisecond PTS (<code>codec_context.time_base = Fraction(1, 1000)</code>)</strong></td>
+<td>USB webcam framerates fluctuate (e.g., 8–30.4 FPS). Setting both <code>stream.time_base</code> AND <code>stream.codec_context.time_base</code> to <code>Fraction(1, 1000)</code> prevents 30+ FPS frames from rounding to duplicate <code>1/30</code> ticks (which otherwise causes FFmpeg muxer <code>EINVAL</code>) and guarantees real-time playback speed.</td>
 </tr>
 <tr>
 <td><strong>ADR-06</strong></td>
@@ -531,6 +544,16 @@
 <td><strong>ADR-10</strong></td>
 <td><strong>Single-source Markdown → HTML doc sync (<code>scripts/sync_docs.py</code>)</strong></td>
 <td>Keeps <code>docs/DOCUMENTATION.md</code> and standalone <code>docs/DOCUMENTATION.html</code> strictly synchronized with verifiable SHA-256 sync checks.</td>
+</tr>
+<tr>
+<td><strong>ADR-11</strong></td>
+<td><strong>Locally bundled <code>Iosevka</code> <code>.woff2</code> + Matte-Black/Orange EYEz UI</strong></td>
+<td>Bundling <code>Iosevka</code> (<code>400–700</code>) under <code>static/fonts/</code> guarantees crisp Batcomputer typography with zero external CDN dependency on localhost, while click-to-focus grid cards keep multi-camera switching immediate and intuitive.</td>
+</tr>
+<tr>
+<td><strong>ADR-12</strong></td>
+<td><strong>Per-camera Auto Software Night Vision (<code>night_vision.py</code>)</strong></td>
+<td>Applies motion-aware temporal denoising + precomputed shadow-lift gamma LUT + <code>YCrCb</code> luminance CLAHE before both MJPEG streaming and H.264 recording, with hysteresis thresholds (<code>enter &lt; 68</code>, <code>exit &gt; 88</code>, <code>1.5s</code> hold) so lighting flickers never toggle mode rapidly.</td>
 </tr>
 </tbody>
 </table>
@@ -607,7 +630,7 @@
 <tr>
 <td><code>PATCH</code></td>
 <td><code>/api/cameras/{cam_id}</code></td>
-<td>Updates camera fields: <code>name</code>, <code>recording</code>, <code>show_timestamp</code>, <code>enabled</code>. Persists to <code>config.json</code>.</td>
+<td>Updates camera fields: <code>name</code>, <code>recording</code>, <code>night_mode</code> (<code>auto\|on\|off</code>), <code>enabled</code>. Persists to <code>config.json</code>.</td>
 </tr>
 <tr>
 <td><code>GET</code></td>
@@ -796,14 +819,14 @@
 <hr />
 <h2 id="7-web-dashboard-guide">7. Web Dashboard Guide</h2>
 <ol>
-<li><strong>Header Bar:</strong> Switch between <strong>Cameras</strong> and <strong>Recordings</strong>, click the <strong>Storage</strong> pill to inspect <code>C:</code> disk space and adjust retention limits, or click <strong>Scan USB</strong> after plugging in additional webcams.</li>
+<li><strong>Header Bar (<code>EYEz</code>):</strong> Switch between <code>01 CAMERAS</code> and <code>02 RECORDINGS</code>, click the <strong>VAULT</strong> pill to inspect <code>C:</code> disk space and adjust retention limits, or click <strong>SCAN USB</strong> after plugging in additional webcams.</li>
 <li><strong>Cameras Tab:</strong>
-   - Switch between <strong>Grid</strong> (responsive multi-cam wall) and <strong>Focus</strong> (single expanded camera view).
-   - Each card shows live online status, pulsing <code>REC</code> loop timer + progress bar, resolution/FPS HUD, and quick actions (<strong>Rec On/Off</strong>, <strong>Snapshot</strong>, <strong>TS</strong>, <strong>Rename</strong>, <strong>Focus</strong>, <strong>Full</strong>).
-   - Toggling <strong>Rec On → Rec Off</strong> immediately flushes and saves the current loop so it appears in <strong>Recordings</strong>.</li>
+   - <strong>GRID view:</strong> Shows available cameras as named tactical cards (<code>CH-01 // CAMERA NAME</code>) in a multi-column grid with targeting reticles; clicking any card header or video viewport immediately focuses that camera.
+   - <strong>FOCUS view:</strong> Expands the selected camera full-width with a top command strip (<code>← BACK TO GRID</code> + channel switcher pills) while pausing hidden camera streams to save bandwidth.
+   - Card controls (<strong>● REC / REC OFF</strong>, <strong>NV:AUTO/ON/OFF</strong>, <strong>SNAP</strong>, <strong>RENAME</strong>, <strong>FULL</strong>) remain visible in both Grid and Focus views; timestamps are always burned into the bottom-left of every feed and recording. Toggling recording off immediately archives the current loop into <strong>Recordings</strong>.</li>
 <li><strong>Recordings Tab:</strong>
-   - Filter clips by <strong>Camera</strong>, <strong>Date</strong>, or <strong>★ Starred Only</strong>.
-   - Play directly in the theater with native timeline scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed pills, <strong>Prev / Next</strong> loop navigation, <strong>Star</strong> protection, <strong>Download</strong>, and <strong>Delete</strong>.</li>
+   - Filter clips by <strong>Camera</strong>, <strong>Date</strong>, or <strong>★ LOCKED ONLY</strong>.
+   - Play directly in the reticle-framed theater with native timeline scrubbing, <code>0.5× / 1× / 2× / 4×</code> speed pills, <strong>PREV / NEXT</strong> loop navigation, <strong>STAR / LOCK</strong> protection, <strong>DOWNLOAD</strong>, and <strong>DELETE</strong>.</li>
 </ol>
 <hr />
 <h2 id="8-keeping-docs-in-sync">8. Keeping Docs in Sync</h2>
@@ -816,6 +839,35 @@
 </code></pre>
 <hr />
 <h2 id="9-changelog">9. Changelog</h2>
+<h3 id="v041-2026-11-24"><code>v0.4.1</code> — 2026-11-24</h3>
+<ul>
+<li>Fixed <strong>Focus</strong> mode viewport sizing in <code>static/styles.css</code> (<code>block-size: clamp(300px, calc(100dvb - 19.5rem), 760px)</code> + <code>overflow: clip</code> + <code>min-block-size: 0</code> on <code>&lt;img&gt;</code>) so the entire 16:9 video frame (including the bottom-left timestamp) and all card action buttons (<code>REC</code>, <code>NV</code>, <code>SNAP</code>, <code>RENAME</code>, <code>FULL</code>) fit cleanly on screen with zero clipping.</li>
+<li>Enforced always-on timestamps in <code>camera.py</code> and <code>config.py</code>, and removed the <code>TS</code> toggle button from camera cards.</li>
+</ul>
+<h3 id="v040-2026-11-24"><code>v0.4.0</code> — 2026-11-24</h3>
+<ul>
+<li>Added per-camera <strong>Auto Night Vision</strong> (<code>night_vision.py</code>) with <code>NV:AUTO / NV:ON / NV:OFF</code> controls persisted in <code>config.json</code>: enhances both live feeds and recorded H.264 MP4s via motion-aware temporal denoising, shadow-lift gamma LUT, and <code>YCrCb</code> luminance CLAHE with anti-flicker hysteresis.</li>
+<li>Added a glowing <strong>green eye HUD icon</strong> (<code>NV</code>) on the video viewport whenever Night Vision is actively engaged (plus <code>| NV</code> in the burned-in timestamp overlay).</li>
+<li>Refined the <strong>Recordings</strong> video center overlay: clicking Play hides the icon immediately; tapping the playing video keeps playing while revealing the Pause icon (auto-hides after 2.6s); clicking the Pause icon pauses playback; added an opaque matte-backed orange buffering spinner that cleanly masks default browser spinners.</li>
+</ul>
+<h3 id="v032-2026-11-24"><code>v0.3.2</code> — 2026-11-24</h3>
+<ul>
+<li>Disabled auto-selection and autoplay in the <strong>Recordings</strong> tab; users now select a clip from the archive list and click a YouTube-style centered tactical Play/Pause overlay to start or pause playback.</li>
+<li>Removed the <code>NVR // LOCALHOST</code> badge from the top header bar for a cleaner <strong>EYEz</strong> wordmark.</li>
+</ul>
+<h3 id="v031-2026-11-24"><code>v0.3.1</code> — 2026-11-24</h3>
+<ul>
+<li>Fixed <code>av.error.ArgumentError</code> (<code>EINVAL</code>) muxing crash at 30+ FPS in <code>recorder.py</code> by explicitly setting <code>stream.codec_context.time_base = Fraction(1, 1000)</code> alongside <code>stream.time_base</code> so sub-33ms frames never collide on identical <code>1/30</code> encoder ticks.</li>
+<li>Updated <code>_close_segment(discard=True)</code> on encode exceptions with a brief retry backoff so errors never spam 0-second broken clips.</li>
+<li>Clarified camera card telemetry wording (<code>N VIEWERS · M SAVED</code> instead of <code>WATCH · LOOPS</code>).</li>
+</ul>
+<h3 id="v030-2026-11-24"><code>v0.3.0</code> — 2026-11-24</h3>
+<ul>
+<li>Rebranded application to <strong>EYEz</strong> with a Batcomputer-inspired matte-black (<code>#070708</code> / <code>#0e0e11</code>) and tactical-orange (<code>#ff6a00</code>) design system and corner targeting reticles.</li>
+<li>Bundled <code>Iosevka</code> Latin <code>.woff2</code> font weights (<code>400</code>, <code>500</code>, <code>600</code>, <code>700</code>) under <code>static/fonts/</code> and applied <code>Iosevka</code> across the entire UI.</li>
+<li>Redesigned <strong>Grid</strong> view into a multi-column card matrix with prominent channel/camera name plates (<code>CH-01 // NAME</code>), hover <code>[ CLICK TO FOCUS ]</code> cues, one-click Focus entry on any card, and a <code>← BACK TO GRID</code> focus command bar.</li>
+<li>Synced <code>docs/DOCUMENTATION.html</code> styling to the EYEz matte-black &amp; orange palette.</li>
+</ul>
 <h3 id="v022-2026-11-24"><code>v0.2.2</code> — 2026-11-24</h3>
 <ul>
 <li>Fixed DirectShow MJPG negotiation in <code>camera.py</code> by passing <code>CAP_PROP_FOURCC=MJPG</code>, width, height, and FPS via <code>cv2.VideoCapture(index, CAP_DSHOW, params)</code>, boosting USB 720p capture from ~7.5 FPS (<code>YUY2</code>) to ~30 FPS (<code>MJPG</code>).</li>

@@ -35,13 +35,19 @@
   const btnScanCameras = document.getElementById("btn-scan-cameras");
 
   const cameraWall = document.getElementById("camera-wall");
+  const focusBar = document.getElementById("focus-bar");
   const focusStrip = document.getElementById("focus-strip");
+  const btnBackToGrid = document.getElementById("btn-back-to-grid");
   const camerasEmpty = document.getElementById("cameras-empty");
+  const cameraModeLabel = document.getElementById("camera-mode-label");
   const cameraToolbarHint = document.getElementById("camera-toolbar-hint");
   const btnLayoutGrid = document.getElementById("btn-layout-grid");
   const btnLayoutFocus = document.getElementById("btn-layout-focus");
 
   const recordingPlayer = document.getElementById("recording-player");
+  const videoCenterOverlay = document.getElementById("video-center-overlay");
+  const btnCenterAction = document.getElementById("btn-center-action");
+  const centerBufferRing = document.getElementById("center-buffer-ring");
   const theaterPlaceholder = document.getElementById("theater-placeholder");
   const theaterBar = document.getElementById("theater-bar");
   const playerClipTitle = document.getElementById("player-clip-title");
@@ -88,7 +94,7 @@
 
   // ---------------- HELPERS ----------------
   function showToast(message) {
-    toastEl.textContent = message;
+    toastEl.textContent = message.toUpperCase();
     toastEl.hidden = false;
     window.clearTimeout(toastTimer);
     toastTimer = window.setTimeout(() => {
@@ -109,6 +115,10 @@
     const mins = Math.floor(total / 60);
     const secs = total % 60;
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function formatChannel(index) {
+    return `CH-${String(Number(index) + 1).padStart(2, "0")}`;
   }
 
   function formatClipTime(isoString) {
@@ -180,7 +190,6 @@
   tabCameras.addEventListener("click", () => setActiveTab("cameras"));
   tabRecordings.addEventListener("click", () => setActiveTab("recordings"));
 
-  // Pause live MJPEG streams when viewing Recordings tab to free browser bandwidth
   function syncStreamSources() {
     const cards = cameraWall.querySelectorAll(".cam-card");
     cards.forEach((card) => {
@@ -206,7 +215,7 @@
     });
   }
 
-  // ---------------- LAYOUT MODE ----------------
+  // ---------------- LAYOUT MODE (GRID <-> FOCUS) ----------------
   function setLayout(mode, focusId = null) {
     state.layout = mode;
     if (focusId) {
@@ -223,6 +232,22 @@
 
     updateFocusClasses();
     syncStreamSources();
+    updateCameraToolbarCopy();
+  }
+
+  function updateCameraToolbarCopy() {
+    const mins = Math.round((state.settings?.segment_duration_seconds || 300) / 60);
+    const dataDir = state.settings?.data_dir || "C:\\SurveillanceData";
+    if (state.layout === "focus") {
+      const focused = state.cameras.find((c) => c.id === state.focusedCameraId);
+      cameraModeLabel.textContent = focused
+        ? `FOCUS // ${formatChannel(focused.index)} ${focused.name.toUpperCase()}`
+        : "FOCUS // THEATER";
+      cameraToolbarHint.textContent = `SINGLE-FEED LOCK · ${mins}-MIN H.264 LOOPS → ${dataDir}`;
+    } else {
+      cameraModeLabel.textContent = "MATRIX // GRID VIEW";
+      cameraToolbarHint.textContent = `CLICK ANY CAMERA CARD TO FOCUS · ${mins}-MIN H.264 LOOPS → ${dataDir}`;
+    }
   }
 
   function updateFocusClasses() {
@@ -232,13 +257,13 @@
         card.dataset.camId === state.focusedCameraId
       );
     });
-    renderFocusStrip();
+    renderFocusBar();
   }
 
-  function renderFocusStrip() {
-    const showStrip = state.layout === "focus" && state.cameras.length > 1;
-    focusStrip.hidden = !showStrip;
-    if (!showStrip) return;
+  function renderFocusBar() {
+    const inFocus = state.layout === "focus" && state.cameras.length > 0;
+    focusBar.hidden = !inFocus;
+    if (!inFocus) return;
 
     focusStrip.innerHTML = "";
     state.cameras.forEach((cam) => {
@@ -248,7 +273,7 @@
       if (cam.id === state.focusedCameraId) {
         btn.classList.add("is-active");
       }
-      btn.textContent = `${cam.online ? "● " : "○ "}${cam.name}`;
+      btn.textContent = `${formatChannel(cam.index)} // ${cam.name.toUpperCase()}`;
       btn.addEventListener("click", () => setLayout("focus", cam.id));
       focusStrip.appendChild(btn);
     });
@@ -256,6 +281,7 @@
 
   btnLayoutGrid.addEventListener("click", () => setLayout("grid"));
   btnLayoutFocus.addEventListener("click", () => setLayout("focus"));
+  btnBackToGrid.addEventListener("click", () => setLayout("grid"));
 
   // ---------------- CAMERA WALL RENDERING ----------------
   function createCameraCard(cam) {
@@ -264,7 +290,23 @@
     card.dataset.camId = cam.id;
 
     card.innerHTML = `
-      <div class="cam-stage">
+      <div class="cam-header" data-focus-trigger="1" title="Click to focus camera">
+        <div class="cam-title-cluster">
+          <span class="cam-channel" data-field="channel"></span>
+          <h2 class="cam-name" data-field="name"></h2>
+        </div>
+        <div class="cam-header-status">
+          <span class="hud-dot" data-field="dot"></span>
+          <span data-field="hud-status">INIT</span>
+        </div>
+      </div>
+
+      <div class="cam-stage" data-focus-trigger="1">
+        <span class="reticle reticle-tl" aria-hidden="true"></span>
+        <span class="reticle reticle-tr" aria-hidden="true"></span>
+        <span class="reticle reticle-bl" aria-hidden="true"></span>
+        <span class="reticle reticle-br" aria-hidden="true"></span>
+
         <img
           class="cam-stream-img"
           alt=""
@@ -272,43 +314,64 @@
           height="720"
           decoding="async"
         />
+
         <div class="cam-hud-top">
-          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-            <span class="hud-pill">
-              <span class="hud-dot" data-field="dot"></span>
-              <span data-field="hud-status">Connecting</span>
-            </span>
+          <div class="cam-hud-left">
             <span class="hud-pill hud-rec" data-field="rec-pill" hidden>
               <span class="rec-pulse" aria-hidden="true"></span>
               <span data-field="rec-timer">REC 00:00 / 05:00</span>
             </span>
+            <span
+              class="hud-pill hud-nv"
+              data-field="nv-pill"
+              title="Night Vision Active"
+              aria-label="Night Vision Active"
+              hidden
+            >
+              <svg class="hud-nv-eye" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M2 12C4.5 7.5 8 5.5 12 5.5C16 5.5 19.5 7.5 22 12C19.5 16.5 16 18.5 12 18.5C8 18.5 4.5 16.5 2 12Z"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                />
+                <circle cx="12" cy="12" r="3.2" fill="currentColor" />
+              </svg>
+              <span>NV</span>
+            </span>
           </div>
           <span class="hud-pill" data-field="hud-metrics">--</span>
         </div>
-        <div class="cam-overlay-msg" data-field="overlay" hidden>Connecting...</div>
+
+        <span class="focus-cue" aria-hidden="true">[ CLICK TO FOCUS ]</span>
+        <div class="cam-overlay-msg" data-field="overlay" hidden>ACQUIRING SIGNAL...</div>
         <div class="cam-loop-progress" aria-hidden="true">
           <div class="cam-loop-fill" data-field="loop-fill"></div>
         </div>
       </div>
+
       <div class="cam-footer">
-        <div class="cam-meta">
-          <div class="cam-name-row">
-            <h2 class="cam-name" data-field="name"></h2>
-          </div>
-          <span class="cam-sub" data-field="sub"></span>
-        </div>
+        <span class="cam-sub" data-field="sub"></span>
         <div class="cam-actions">
-          <button type="button" class="btn btn-sm" data-action="record">Record</button>
-          <button type="button" class="btn btn-sm" data-action="snapshot">Snapshot</button>
-          <button type="button" class="btn btn-sm" data-action="timestamp">TS</button>
-          <button type="button" class="btn btn-sm" data-action="rename">Rename</button>
-          <button type="button" class="btn btn-sm" data-action="focus">Focus</button>
-          <button type="button" class="btn btn-sm" data-action="fullscreen">Full</button>
+          <button type="button" class="btn btn-sm" data-action="record">REC</button>
+          <button type="button" class="btn btn-sm" data-action="nightmode">NV:AUTO</button>
+          <button type="button" class="btn btn-sm" data-action="snapshot">SNAP</button>
+          <button type="button" class="btn btn-sm" data-action="rename">RENAME</button>
+          <button type="button" class="btn btn-sm" data-action="fullscreen">FULL</button>
         </div>
       </div>
     `;
 
-    card.querySelector('[data-action="record"]').addEventListener("click", async () => {
+    // Clicking card header or viewport in Grid mode enters Focus mode
+    card.querySelectorAll('[data-focus-trigger="1"]').forEach((el) => {
+      el.addEventListener("click", () => {
+        if (state.layout === "grid") {
+          setLayout("focus", cam.id);
+        }
+      });
+    });
+
+    card.querySelector('[data-action="record"]').addEventListener("click", async (e) => {
+      e.stopPropagation();
       const current = state.cameras.find((c) => c.id === cam.id);
       if (!current) return;
       const nextRec = !current.recording.enabled;
@@ -319,8 +382,8 @@
         });
         showToast(
           nextRec
-            ? `Recording started on ${current.name}`
-            : `Recording paused on ${current.name} (loop saved)`
+            ? `Recording engaged // ${current.name}`
+            : `Recording stopped // ${current.name} loop archived`
         );
         await fetchCameras();
       } catch (err) {
@@ -328,7 +391,27 @@
       }
     });
 
-    card.querySelector('[data-action="snapshot"]').addEventListener("click", async () => {
+    card.querySelector('[data-action="nightmode"]').addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const current = state.cameras.find((c) => c.id === cam.id);
+      if (!current) return;
+      const order = ["auto", "on", "off"];
+      const currMode = current.night_vision?.mode || "auto";
+      const nextMode = order[(order.indexOf(currMode) + 1) % order.length];
+      try {
+        await apiJson(`/api/cameras/${encodeURIComponent(cam.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ night_mode: nextMode }),
+        });
+        showToast(`Night vision // ${current.name} → ${nextMode.toUpperCase()}`);
+        await fetchCameras();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    card.querySelector('[data-action="snapshot"]').addEventListener("click", async (e) => {
+      e.stopPropagation();
       const current = state.cameras.find((c) => c.id === cam.id);
       try {
         const resp = await fetch(
@@ -341,32 +424,19 @@
         const a = document.createElement("a");
         const stamp = new Date().toISOString().replace(/[:.]/g, "-");
         a.href = url;
-        a.download = `${cam.id}_${stamp}.jpg`;
+        a.download = `EYEz_${cam.id}_${stamp}.jpg`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        showToast(`Snapshot saved (${current ? current.name : cam.id})`);
+        showToast(`Snapshot captured // ${current ? current.name : cam.id}`);
       } catch (err) {
         showToast(err.message || "Failed to capture snapshot");
       }
     });
 
-    card.querySelector('[data-action="timestamp"]').addEventListener("click", async () => {
-      const current = state.cameras.find((c) => c.id === cam.id);
-      if (!current) return;
-      try {
-        await apiJson(`/api/cameras/${encodeURIComponent(cam.id)}`, {
-          method: "PATCH",
-          body: JSON.stringify({ show_timestamp: !current.show_timestamp }),
-        });
-        await fetchCameras();
-      } catch (err) {
-        showToast(err.message);
-      }
-    });
-
-    card.querySelector('[data-action="rename"]').addEventListener("click", () => {
+    card.querySelector('[data-action="rename"]').addEventListener("click", (e) => {
+      e.stopPropagation();
       const current = state.cameras.find((c) => c.id === cam.id);
       state.renamingCameraId = cam.id;
       inputCameraName.value = current ? current.name : cam.name;
@@ -374,15 +444,8 @@
       inputCameraName.select();
     });
 
-    card.querySelector('[data-action="focus"]').addEventListener("click", () => {
-      if (state.layout === "focus" && state.focusedCameraId === cam.id) {
-        setLayout("grid");
-      } else {
-        setLayout("focus", cam.id);
-      }
-    });
-
-    card.querySelector('[data-action="fullscreen"]').addEventListener("click", async () => {
+    card.querySelector('[data-action="fullscreen"]').addEventListener("click", async (e) => {
+      e.stopPropagation();
       const stage = card.querySelector(".cam-stage");
       try {
         if (document.fullscreenElement) {
@@ -399,10 +462,12 @@
   }
 
   function updateCameraCard(card, cam) {
+    const channelEl = card.querySelector('[data-field="channel"]');
     const dot = card.querySelector('[data-field="dot"]');
     const hudStatus = card.querySelector('[data-field="hud-status"]');
     const recPill = card.querySelector('[data-field="rec-pill"]');
     const recTimer = card.querySelector('[data-field="rec-timer"]');
+    const nvPill = card.querySelector('[data-field="nv-pill"]');
     const hudMetrics = card.querySelector('[data-field="hud-metrics"]');
     const overlay = card.querySelector('[data-field="overlay"]');
     const loopFill = card.querySelector('[data-field="loop-fill"]');
@@ -411,29 +476,28 @@
     const subEl = card.querySelector('[data-field="sub"]');
 
     const btnRec = card.querySelector('[data-action="record"]');
-    const btnTs = card.querySelector('[data-action="timestamp"]');
-    const btnFocus = card.querySelector('[data-action="focus"]');
+    const btnNv = card.querySelector('[data-action="nightmode"]');
 
+    channelEl.textContent = formatChannel(cam.index);
     nameEl.textContent = cam.name;
     if (imgEl) imgEl.alt = `Live feed from ${cam.name}`;
+
     const resText =
       cam.resolution?.width && cam.resolution?.height
         ? `${cam.resolution.width}×${cam.resolution.height}`
         : "--";
     const fpsText = `${Number(cam.fps || 0).toFixed(1)} FPS`;
-    hudMetrics.textContent = `${resText} · ${fpsText}`;
-    subEl.textContent = `USB #${cam.index} · ${cam.active_viewers} viewer${
-      cam.active_viewers === 1 ? "" : "s"
-    } · ${cam.recording.segments_completed} loop${
-      cam.recording.segments_completed === 1 ? "" : "s"
-    } saved`;
+    hudMetrics.textContent = `${resText} // ${fpsText}`;
+    subEl.textContent = `USB:${cam.index} · ${cam.active_viewers} VIEWER${
+      cam.active_viewers === 1 ? "" : "S"
+    } · ${cam.recording.segments_completed} SAVED`;
 
     dot.classList.toggle("is-online", Boolean(cam.online));
     dot.classList.toggle("is-offline", !cam.online);
-    hudStatus.textContent = cam.online ? "LIVE" : "OFFLINE";
+    hudStatus.textContent = cam.online ? "ONLINE" : "OFFLINE";
 
     if (!cam.online) {
-      overlay.textContent = cam.error || "Waiting for webcam signal...";
+      overlay.textContent = (cam.error || "WAITING FOR SIGNAL...").toUpperCase();
       overlay.hidden = false;
     } else {
       overlay.hidden = true;
@@ -449,14 +513,38 @@
     const pct = recActive ? Math.min(100, (segElapsed / segDur) * 100) : 0;
     loopFill.style.setProperty("--loop-pct", `${pct.toFixed(1)}%`);
 
-    btnRec.textContent = recEnabled ? "● Rec On" : "Rec Off";
+    btnRec.textContent = recEnabled ? "● REC" : "REC OFF";
     btnRec.classList.toggle("btn-rec-active", recEnabled);
 
-    btnTs.textContent = cam.show_timestamp ? "TS: On" : "TS: Off";
-    btnTs.classList.toggle("is-active", Boolean(cam.show_timestamp));
+    const nvMode = (cam.night_vision?.mode || "auto").toUpperCase();
+    const nvActive = Boolean(cam.night_vision?.active) && Boolean(cam.online);
+    nvPill.hidden = !nvActive;
+    btnNv.textContent = `NV:${nvMode}`;
+    btnNv.classList.toggle("btn-nv-active", nvActive);
+  }
 
-    const isFocused = state.layout === "focus" && state.focusedCameraId === cam.id;
-    btnFocus.textContent = isFocused ? "Exit Focus" : "Focus";
+  function ensureExpansionSlot() {
+    let slot = cameraWall.querySelector(".cam-slot-card");
+    const shouldShow = state.cameras.length === 1;
+    if (!shouldShow) {
+      if (slot) slot.remove();
+      return;
+    }
+    if (!slot) {
+      slot = document.createElement("button");
+      slot.type = "button";
+      slot.className = "cam-slot-card";
+      slot.innerHTML = `
+        <span class="cam-slot-code">[ CH-02 // STANDBY SLOT ]</span>
+        <span class="cam-slot-title">+ ADD USB CAMERA NODE</span>
+        <span class="cam-slot-desc">Plug in another USB webcam and click here to scan and expand your EYEz grid matrix.</span>
+      `;
+      slot.addEventListener("click", () => scanUsbCameras());
+      cameraWall.appendChild(slot);
+    } else {
+      // Keep expansion slot last in grid
+      cameraWall.appendChild(slot);
+    }
   }
 
   function renderCameras() {
@@ -469,19 +557,17 @@
       state.focusedCameraId = cams[0].id;
     }
 
-    // Reconcile existing DOM cards without destroying live MJPEG elements
-    const existingIds = new Set();
     cameraWall.querySelectorAll(".cam-card").forEach((card) => {
       const id = card.dataset.camId;
       if (!cams.some((c) => c.id === id)) {
         card.remove();
-      } else {
-        existingIds.add(id);
       }
     });
 
     cams.forEach((cam) => {
-      let card = cameraWall.querySelector(`.cam-card[data-cam-id="${CSS.escape(cam.id)}"]`);
+      let card = cameraWall.querySelector(
+        `.cam-card[data-cam-id="${CSS.escape(cam.id)}"]`
+      );
       if (!card) {
         card = createCameraCard(cam);
         cameraWall.appendChild(card);
@@ -489,19 +575,16 @@
       updateCameraCard(card, cam);
     });
 
+    ensureExpansionSlot();
     updateFocusClasses();
     syncStreamSources();
+    updateCameraToolbarCopy();
 
     const onlineCount = cams.filter((c) => c.online).length;
     const recCount = cams.filter((c) => c.recording?.active).length;
     systemSummary.textContent = cams.length
-      ? `${onlineCount}/${cams.length} Online · ${recCount} Recording`
-      : "No USB cameras connected";
-
-    if (state.settings) {
-      const mins = Math.round((state.settings.segment_duration_seconds || 300) / 60);
-      cameraToolbarHint.textContent = `Continuous ${mins}-min H.264 loops → ${state.settings.data_dir}`;
-    }
+      ? `NODES: ${onlineCount}/${cams.length} ONLINE // REC: ${recCount} ACTIVE`
+      : "NODES: 00 // NO USB CAMERAS DETECTED";
 
     populateCameraFilterOptions();
   }
@@ -516,11 +599,11 @@
       }
     });
 
-    filterCamera.innerHTML = `<option value="">All Cameras</option>`;
+    filterCamera.innerHTML = `<option value="">ALL CAMERAS</option>`;
     known.forEach((name, id) => {
       const opt = document.createElement("option");
       opt.value = id;
-      opt.textContent = name;
+      opt.textContent = name.toUpperCase();
       filterCamera.appendChild(opt);
     });
     if ([...known.keys()].includes(previous)) {
@@ -542,7 +625,7 @@
       const pct = Math.min(100, (usedBytes / (capGb * 1024 ** 3)) * 100);
       storageBarFill.style.setProperty("--usage-pct", `${pct.toFixed(1)}%`);
     } else {
-      storagePillMeta.textContent = `${formatBytes(usedBytes)} (No cap)`;
+      storagePillMeta.textContent = `${formatBytes(usedBytes)} // UNLIMITED`;
       storageBarFill.style.setProperty("--usage-pct", "18%");
     }
 
@@ -552,10 +635,157 @@
     modalDiskFree.textContent = formatBytes(st.disk_free_bytes);
   }
 
-  // ---------------- RECORDINGS TAB ----------------
+  // ---------------- RECORDINGS ARCHIVE ----------------
+  let pauseRevealTimer = null;
+  let playerControlsVisible = false;
+  let playerBuffering = false;
+
+  function clearPauseRevealTimer() {
+    window.clearTimeout(pauseRevealTimer);
+    pauseRevealTimer = null;
+  }
+
+  function syncPlayerOverlay() {
+    const hasClip = Boolean(state.selectedClipId);
+    videoCenterOverlay.hidden = !hasClip;
+    if (!hasClip) {
+      clearPauseRevealTimer();
+      playerControlsVisible = false;
+      playerBuffering = false;
+      centerBufferRing.hidden = true;
+      return;
+    }
+
+    const paused = recordingPlayer.paused || recordingPlayer.ended;
+    const showBuffer = playerBuffering && !paused;
+
+    videoCenterOverlay.classList.toggle("is-paused", paused);
+    videoCenterOverlay.classList.toggle("is-playing", !paused);
+    videoCenterOverlay.classList.toggle(
+      "is-controls-visible",
+      !paused && playerControlsVisible
+    );
+    videoCenterOverlay.classList.toggle("is-buffering", showBuffer);
+    centerBufferRing.hidden = !showBuffer;
+
+    btnCenterAction.setAttribute(
+      "aria-label",
+      paused ? "Play video" : "Pause video"
+    );
+  }
+
+  function revealPauseBriefly() {
+    playerControlsVisible = true;
+    syncPlayerOverlay();
+    clearPauseRevealTimer();
+    pauseRevealTimer = window.setTimeout(() => {
+      if (!recordingPlayer.paused) {
+        playerControlsVisible = false;
+        syncPlayerOverlay();
+      }
+    }, 2600);
+  }
+
+  // Click on Play / Pause button in center
+  btnCenterAction.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!state.selectedClipId) return;
+
+    if (recordingPlayer.paused || recordingPlayer.ended) {
+      playerControlsVisible = false;
+      clearPauseRevealTimer();
+      if (recordingPlayer.readyState < 3) {
+        playerBuffering = true;
+      }
+      recordingPlayer.play().catch(() => {
+        playerBuffering = false;
+        syncPlayerOverlay();
+      });
+      syncPlayerOverlay();
+    } else if (playerControlsVisible) {
+      // Clicking Pause while Pause icon is shown pauses playback
+      clearPauseRevealTimer();
+      playerControlsVisible = false;
+      playerBuffering = false;
+      recordingPlayer.pause();
+      syncPlayerOverlay();
+    }
+  });
+
+  // Tapping video area while playing reveals Pause icon (continues playing)
+  videoCenterOverlay.addEventListener("click", () => {
+    if (!state.selectedClipId) return;
+    if (recordingPlayer.paused || recordingPlayer.ended) {
+      return;
+    }
+    if (playerControlsVisible) {
+      clearPauseRevealTimer();
+      playerControlsVisible = false;
+      syncPlayerOverlay();
+    } else {
+      revealPauseBriefly();
+    }
+  });
+
+  recordingPlayer.addEventListener("play", () => {
+    clearPauseRevealTimer();
+    playerControlsVisible = false;
+    if (recordingPlayer.readyState < 3) {
+      playerBuffering = true;
+    }
+    syncPlayerOverlay();
+  });
+
+  recordingPlayer.addEventListener("playing", () => {
+    playerBuffering = false;
+    playerControlsVisible = false;
+    syncPlayerOverlay();
+  });
+
+  recordingPlayer.addEventListener("canplay", () => {
+    playerBuffering = false;
+    syncPlayerOverlay();
+  });
+
+  recordingPlayer.addEventListener("waiting", () => {
+    if (!recordingPlayer.paused) {
+      playerBuffering = true;
+      syncPlayerOverlay();
+    }
+  });
+
+  recordingPlayer.addEventListener("stalled", () => {
+    if (!recordingPlayer.paused) {
+      playerBuffering = true;
+      syncPlayerOverlay();
+    }
+  });
+
+  recordingPlayer.addEventListener("pause", () => {
+    clearPauseRevealTimer();
+    playerControlsVisible = false;
+    playerBuffering = false;
+    syncPlayerOverlay();
+  });
+
+  recordingPlayer.addEventListener("ended", () => {
+    clearPauseRevealTimer();
+    playerControlsVisible = false;
+    playerBuffering = false;
+    syncPlayerOverlay();
+  });
+
+  recordingPlayer.addEventListener("error", () => {
+    playerBuffering = false;
+    syncPlayerOverlay();
+  });
+
   function selectClip(clipId) {
     const clip = state.recordings.find((r) => r.id === clipId);
     state.selectedClipId = clip ? clip.id : null;
+    clearPauseRevealTimer();
+    playerControlsVisible = false;
+    playerBuffering = false;
 
     clipList.querySelectorAll(".clip-item").forEach((btn) => {
       btn.classList.toggle("is-selected", btn.dataset.clipId === state.selectedClipId);
@@ -566,6 +796,7 @@
       recordingPlayer.removeAttribute("src");
       recordingPlayer.removeAttribute("poster");
       recordingPlayer.load();
+      videoCenterOverlay.hidden = true;
       theaterPlaceholder.hidden = false;
       theaterBar.hidden = true;
       return;
@@ -574,6 +805,7 @@
     theaterPlaceholder.hidden = true;
     theaterBar.hidden = false;
 
+    recordingPlayer.pause();
     if (clip.thumbnail_url) {
       recordingPlayer.poster = clip.thumbnail_url;
     } else {
@@ -582,29 +814,28 @@
 
     recordingPlayer.src = clip.video_url;
     recordingPlayer.playbackRate = state.playbackSpeed;
-    recordingPlayer.play().catch(() => {
-      // Autoplay might be blocked until user interaction; controls are visible.
-    });
+    recordingPlayer.load();
+    syncPlayerOverlay();
 
     updatePlayerHeader(clip);
   }
 
   function updatePlayerHeader(clip) {
-    playerClipTitle.textContent = `${clip.camera_name} — ${formatClipDateTime(
+    playerClipTitle.textContent = `${clip.camera_name} // ${formatClipDateTime(
       clip.started_at
     )}`;
     const res = clip.width && clip.height ? `${clip.width}×${clip.height}` : "--";
-    playerClipMeta.textContent = `Duration ${formatDuration(
+    playerClipMeta.textContent = `DUR ${formatDuration(
       clip.duration_seconds
-    )} · ${formatBytes(clip.size_bytes)} · ${res} · ${clip.filename}`;
+    )} // ${formatBytes(clip.size_bytes)} // ${res} // ${clip.filename}`;
 
     playerLockedBadge.hidden = !clip.locked;
-    btnToggleStar.textContent = clip.locked ? "★ Starred" : "☆ Star";
+    btnToggleStar.textContent = clip.locked ? "★ LOCKED" : "☆ STAR";
     btnToggleStar.classList.toggle("btn-star-active", Boolean(clip.locked));
     btnToggleStar.setAttribute("aria-pressed", String(Boolean(clip.locked)));
 
     btnDownloadClip.href = clip.download_url;
-    btnDownloadClip.download = `${clip.camera_id}_${clip.date}_${clip.filename}`;
+    btnDownloadClip.download = `EYEz_${clip.camera_id}_${clip.date}_${clip.filename}`;
 
     btnDeleteClip.disabled = Boolean(clip.locked);
     btnDeleteClip.title = clip.locked
@@ -620,13 +851,12 @@
     const recs = state.recordings;
     const totalBytes = recs.reduce((acc, r) => acc + (r.size_bytes || 0), 0);
 
-    clipCountLabel.textContent = `${recs.length} clip${recs.length === 1 ? "" : "s"}`;
+    clipCountLabel.textContent = `${recs.length} CLIP${recs.length === 1 ? "" : "S"}`;
     clipStorageLabel.textContent = formatBytes(totalBytes);
     recordingsEmpty.hidden = recs.length > 0;
 
-    // Update date filter dropdown while preserving current selection
     const currentDate = filterDate.value;
-    filterDate.innerHTML = `<option value="">All Dates</option>`;
+    filterDate.innerHTML = `<option value="">ALL DATES</option>`;
     state.dates.forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d;
@@ -651,10 +881,10 @@
       }
 
       const thumbMarkup = clip.thumbnail_url
-        ? `<img src="${clip.thumbnail_url}" alt="" width="112" height="63" loading="lazy" />`
+        ? `<img src="${clip.thumbnail_url}" alt="" width="108" height="61" loading="lazy" />`
         : "";
       const starTag = clip.locked
-        ? `<span class="clip-star-tag" aria-label="Starred">★</span>`
+        ? `<span class="clip-star-tag" aria-label="Locked">★</span>`
         : "";
 
       btn.innerHTML = `
@@ -682,14 +912,11 @@
       if (existing) {
         updatePlayerHeader(existing);
       } else {
-        selectClip(recs[0].id);
+        selectClip(null);
       }
-    } else if (state.activeTab === "recordings") {
-      selectClip(recs[0].id);
     }
   }
 
-  // Player controls
   speedButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const speed = Number(btn.dataset.speed || 1);
@@ -730,8 +957,8 @@
       renderRecordingsList();
       showToast(
         updated.locked
-          ? "Clip starred & protected from auto-cleanup"
-          : "Clip protection removed"
+          ? "Clip locked // protected from purge"
+          : "Clip lock removed"
       );
       fetchCameras();
     } catch (err) {
@@ -750,7 +977,7 @@
         method: "DELETE",
       });
       selectClip(null);
-      showToast("Recording deleted");
+      showToast("Recording purged");
       await fetchRecordings();
       await fetchCameras();
     } catch (err) {
@@ -758,7 +985,6 @@
     }
   });
 
-  // Filters
   filterCamera.addEventListener("change", () => {
     state.filters.cameraId = filterCamera.value;
     fetchRecordings();
@@ -778,7 +1004,7 @@
 
   btnRefreshRecordings.addEventListener("click", () => {
     fetchRecordings();
-    showToast("Recordings refreshed");
+    showToast("Archive refreshed");
   });
 
   // ---------------- DIALOGS ----------------
@@ -816,7 +1042,7 @@
       renderStorageHud();
       renderCameras();
       dialogStorage.close();
-      showToast("Storage & retention settings saved");
+      showToast("Vault retention policy updated");
     } catch (err) {
       showToast(err.message);
     }
@@ -833,8 +1059,8 @@
       const n = data.cleanup?.deleted_count || 0;
       showToast(
         n > 0
-          ? `Cleanup removed ${n} old clip(s) (${formatBytes(data.cleanup.reclaimed_bytes)})`
-          : "Storage is already within your retention limits"
+          ? `Purged ${n} clip(s) // ${formatBytes(data.cleanup.reclaimed_bytes)} freed`
+          : "Vault within retention limits"
       );
     } catch (err) {
       showToast(err.message);
@@ -855,27 +1081,28 @@
         body: JSON.stringify({ name: newName }),
       });
       dialogRename.close();
-      showToast(`Renamed camera to "${newName}"`);
+      showToast(`Node renamed // ${newName}`);
       await fetchCameras();
     } catch (err) {
       showToast(err.message);
     }
   });
 
-  // Scan USB cameras
-  btnScanCameras.addEventListener("click", async () => {
+  async function scanUsbCameras() {
     btnScanCameras.disabled = true;
     try {
       const data = await apiJson("/api/cameras/scan", { method: "POST" });
       state.cameras = data.cameras || [];
       renderCameras();
-      showToast(`Scan complete — ${state.cameras.length} camera(s) ready`);
+      showToast(`USB scan complete // ${state.cameras.length} node(s) active`);
     } catch (err) {
       showToast(err.message);
     } finally {
       btnScanCameras.disabled = false;
     }
-  });
+  }
+
+  btnScanCameras.addEventListener("click", () => scanUsbCameras());
 
   // ---------------- DATA FETCHING ----------------
   async function fetchCameras() {
@@ -887,7 +1114,7 @@
       renderCameras();
       renderStorageHud();
     } catch {
-      systemSummary.textContent = "Server disconnected — retrying...";
+      systemSummary.textContent = "LINK LOST // RECONNECTING TO LOCALHOST...";
     }
   }
 
@@ -904,7 +1131,7 @@
       renderStorageHud();
       renderRecordingsList();
     } catch (err) {
-      showToast(err.message || "Failed loading recordings");
+      showToast(err.message || "Failed loading archive");
     }
   }
 

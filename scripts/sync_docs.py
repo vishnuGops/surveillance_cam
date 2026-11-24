@@ -36,31 +36,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <style>
       :root {{
         color-scheme: dark;
-        --bg: #080c14;
-        --surface: #101724;
-        --surface-2: #172033;
-        --border: rgb(148 163 184 / 16%);
-        --border-strong: rgb(148 163 184 / 30%);
-        --text: #edf2f7;
-        --muted: #94a3b8;
-        --accent: #60a5fa;
-        --accent-soft: rgb(59 130 246 / 14%);
-        --code-bg: #0b111d;
-        --radius: 12px;
+        --bg: #070708;
+        --surface: #0e0e11;
+        --surface-2: #15151a;
+        --border: #23232a;
+        --border-strong: #363642;
+        --text: #ededf0;
+        --muted: #848494;
+        --accent: #ff6a00;
+        --accent-soft: rgb(255 106 0 / 13%);
+        --code-bg: #050506;
+        --radius: 4px;
       }}
 
       :root[data-theme="light"] {{
         color-scheme: light;
-        --bg: #f8fafc;
+        --bg: #f5f5f7;
         --surface: #ffffff;
-        --surface-2: #f1f5f9;
-        --border: rgb(15 23 42 / 12%);
-        --border-strong: rgb(15 23 42 / 24%);
-        --text: #0f172a;
-        --muted: #475569;
-        --accent: #2563eb;
-        --accent-soft: rgb(37 99 235 / 10%);
-        --code-bg: #0f172a;
+        --surface-2: #ececf0;
+        --border: rgb(15 15 20 / 13%);
+        --border-strong: rgb(15 15 20 / 26%);
+        --text: #111114;
+        --muted: #52525c;
+        --accent: #d95700;
+        --accent-soft: rgb(217 87 0 / 10%);
+        --code-bg: #111114;
       }}
 
       *,
@@ -78,7 +78,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         min-block-size: 100dvb;
         background: var(--bg);
         color: var(--text);
-        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-family: "Iosevka", ui-monospace, SFMono-Regular, Consolas, monospace;
         line-height: 1.65;
       }}
 
@@ -357,7 +357,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="doc-shell">
       <aside class="sidebar" aria-label="Document navigation">
         <div class="sidebar-header">
-          <span class="sidebar-brand">HomeWatch NVR Docs</span>
+          <span class="sidebar-brand">EYEz // DOCS</span>
           <button type="button" class="theme-btn" id="btn-theme">Light</button>
         </div>
         <p class="toc-title">On This Page</p>
