@@ -38,6 +38,11 @@
 | `static/fonts/` | Locally bundled `Iosevka` Latin `.woff2` weights (`400`, `500`, `600`, `700`) for 100% offline localhost rendering. |
 | `static/app.js` | State management, camera wall reconciliation, bandwidth-saving stream pausing on tab switch, recording theater controls, and API polling. |
 | `scripts/sync_docs.py` | Deterministic generator converting `docs/DOCUMENTATION.md` into the standalone `docs/DOCUMENTATION.html` with drift checking (`--check`). |
+| `eyez_service.py` | 24/7 Windows System Tray launcher & watchdog supervisor (single-instance Named Mutex, crash/hang auto-restart, `SetThreadExecutionState` sleep prevention, rotating logs). |
+| `scripts/install_autostart.ps1` | Registers the interactive-session Windows Scheduled Task (`EYEz Surveillance`) with At-Logon + 1-minute auto-revive triggers and a Start Menu shortcut. |
+| `scripts/uninstall_autostart.ps1` | Removes the Scheduled Task and stops running EYEz processes cleanly. |
+| `scripts/status_eyez.ps1` | Prints Scheduled Task state, active PIDs, live API health, Tailscale status, and recent log entries. |
+| `scripts/setup_tailscale.ps1` | Configures persistent, tailnet-only HTTPS access (`tailscale serve --bg --https=8443 http://127.0.0.1:8000`) without interfering with port `443` services or Funnel. |
 
 ### Data & Threading Flow
 
@@ -83,6 +88,8 @@ USB Webcam #N
 | **ADR-10** | **Single-source Markdown → HTML doc sync (`scripts/sync_docs.py`)** | Keeps `docs/DOCUMENTATION.md` and standalone `docs/DOCUMENTATION.html` strictly synchronized with verifiable SHA-256 sync checks. |
 | **ADR-11** | **Locally bundled `Iosevka` `.woff2` + Matte-Black/Orange EYEz UI** | Bundling `Iosevka` (`400–700`) under `static/fonts/` guarantees crisp Batcomputer typography with zero external CDN dependency on localhost, while click-to-focus grid cards keep multi-camera switching immediate and intuitive. |
 | **ADR-12** | **Per-camera Auto Software Night Vision (`night_vision.py`)** | Applies motion-aware temporal denoising + precomputed shadow-lift gamma LUT + `YCrCb` luminance CLAHE before both MJPEG streaming and H.264 recording, with hysteresis thresholds (`enter < 68`, `exit > 88`, `1.5s` hold) so lighting flickers never toggle mode rapidly. |
+| **ADR-13** | **Interactive-Session Task Scheduler + System Tray Watchdog (`eyez_service.py`) over Session 0 Windows Service** | Windows 10/11 Session 0 services frequently lose DirectShow (`CAP_DSHOW`) / Camera Privacy access to USB webcams. Running `eyez_service.py` via an Interactive-logon Scheduled Task with At-Logon + 1-minute watchdog triggers, a Named Mutex (`Local\EYEzSurveillanceServiceMutex`), unlimited `ExecutionTimeLimit`, and `SetThreadExecutionState(ES_SYSTEM_REQUIRED)` delivers reliable 24/7 USB camera access, auto-revive on close/crash, and sleep prevention without blocking monitor power-off. |
+| **ADR-14** | **Tailnet-Only HTTPS via `tailscale serve --https=8443` to `127.0.0.1:8000`** | Keeping EYEz bound strictly to `127.0.0.1:8000` avoids LAN exposure and Windows Firewall holes, guarantees continuous local recording when Tailscale pauses for Surfshark, and isolates EYEz on dedicated tailnet-only HTTPS port `8443` so port `443` Tailscale Funnel services remain untouched and EYEz is never exposed to the public internet. |
 
 ---
 
@@ -93,6 +100,8 @@ All runtime data is stored under `C:\SurveillanceData` (overridable via `SURVEIL
 ```text
 C:\SurveillanceData\
 ├── config.json
+├── logs\
+│   └── eyez.log                     # Rotating watchdog + server logs (5 MB × 5)
 ├── snapshots\
 │   └── cam-0_20261124_002510.jpg
 └── recordings\
@@ -191,11 +200,20 @@ C:\SurveillanceData\
 ### Running the Server
 
 ```powershell
-# Standard localhost startup
-.\.venv\Scripts\python.exe app.py
+# 24/7 Production Mode (Windows System Tray + Auto-Start on Reboot + Crash/Close Auto-Revive)
+.\scripts\install_autostart.ps1
 
-# Custom storage path, port, or loop settings
-.\.venv\Scripts\python.exe app.py --host 127.0.0.1 --port 8000 --data-dir C:\SurveillanceData --segment-seconds 300 --max-storage-gb 50 --max-days 7
+# Check 24/7 service health, Tailscale URL & recent logs
+.\scripts\status_eyez.ps1
+
+# Configure persistent Tailscale tailnet-only HTTPS proxy (port 8443)
+.\scripts\setup_tailscale.ps1
+
+# Stop and remove 24/7 auto-start
+.\scripts\uninstall_autostart.ps1
+
+# Manual foreground run (for development)
+.\.venv\Scripts\python.exe app.py
 ```
 
 ### Environment Variables
@@ -246,6 +264,14 @@ C:\SurveillanceData\
 ---
 
 ## 9. Changelog
+
+### `v0.6.1` — 2026-11-24
+- Added Tailscale tailnet-only HTTPS remote access (`scripts/setup_tailscale.ps1`) on dedicated port `8443` (`https://vish-homeserver.tail796df0.ts.net:8443` → `http://127.0.0.1:8000`), keeping existing port `443` Funnel routes isolated and ensuring zero local recording disruption when Tailscale pauses for Surfshark.
+- Added live Tailscale online/URL status reporting to `scripts/status_eyez.ps1`.
+
+### `v0.6.0` — 2026-11-24
+- Added `eyez_service.py`: 24/7 Windows System Tray launcher & watchdog supervisor with single-instance Windows Named Mutex, automatic crash & HTTP hang recovery, `SetThreadExecutionState` PC sleep prevention (allowing monitor off), rotating logs at `C:\SurveillanceData\logs\eyez.log`, and programmatic `assets/eyez.ico` export.
+- Added `scripts/install_autostart.ps1`, `scripts/uninstall_autostart.ps1`, and `scripts/status_eyez.ps1` to manage the interactive-session Windows Scheduled Task (`EYEz Surveillance`) with At-Logon startup and 1-minute auto-revive watchdog triggers.
 
 ### `v0.5.0` — 2026-11-24
 - Added multi-selection checkboxes (including **Shift+Click** range selection), **SELECT ALL** (with indeterminate state), selected count indicator, and a bulk **Delete** trash-icon button to the **Recordings** archive sidebar.

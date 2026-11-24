@@ -18,8 +18,25 @@ Whenever you update `docs/DOCUMENTATION.md`, keep the HTML copy in sync with:
 
 ## Quick Start (Windows PowerShell)
 
+### 24/7 Always-On Mode (System Tray + Auto-Start + Auto-Revive)
+
 ```powershell
-# Run using the included virtual environment
+# Install and launch EYEz in the Windows System Tray (auto-starts on reboot & revives if closed)
+.\scripts\install_autostart.ps1
+
+# Check live 24/7 status, Tailscale URL & logs
+.\scripts\status_eyez.ps1
+
+# Enable persistent tailnet-only HTTPS access on port 8443 (from any Tailscale device)
+.\scripts\setup_tailscale.ps1
+
+# Uninstall auto-start and stop EYEz
+.\scripts\uninstall_autostart.ps1
+```
+
+### Manual Foreground Run
+
+```powershell
 .\.venv\Scripts\python.exe app.py
 ```
 
@@ -38,6 +55,8 @@ Open **http://127.0.0.1:8000** in your browser.
 - `recorder.py` — Non-blocking PyAV H.264 continuous loop recorder & thumbnail generator
 - `camera.py` — Multi-camera USB auto-discovery (`CameraManager`) and threaded capture (`CameraStream`)
 - `app.py` — FastAPI server with multi-camera, recordings, HTTP range playback, and storage endpoints
-- `static/` — Two-tab dark glassmorphic dashboard (`index.html`, `styles.css`, `app.js`)
+- `night_vision.py` — Per-camera real-time Auto Night Vision (temporal denoise + gamma LUT + CLAHE)
+- `eyez_service.py` — 24/7 Windows System Tray launcher, watchdog supervisor, and sleep prevention
+- `static/` — Two-tab matte-black & orange EYEz dashboard (`index.html`, `styles.css`, `app.js`, bundled `Iosevka` fonts)
 - `docs/` — Synchronized project documentation (`DOCUMENTATION.md` & `DOCUMENTATION.html`)
-- `scripts/sync_docs.py` — Deterministic Markdown → HTML documentation sync tool
+- `scripts/` — `install_autostart.ps1`, `uninstall_autostart.ps1`, `status_eyez.ps1`, and `sync_docs.py`
